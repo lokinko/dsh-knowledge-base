@@ -51,19 +51,52 @@ PDF 附件当前提供打开和下载功能，不提供文本提取或 OCR。
 
 ## 安装
 
-在 DSH 的插件管理中选择从 npm 安装，填写：
+**0.1.0 已发布到 npm**：[查看 npm 包](https://www.npmjs.com/package/@lokinko/dsh-knowledge-base/v/0.1.0)。发布包已包含预构建的 Host 与 Client 入口，通过 DSH 插件管理即可安装和启用。
+
+使用旧的 `@lokinko/dsh-note` 时，请先按[独立笔记开发版升级说明](#从独立笔记开发版升级)停用旧插件；使用 `@local/todo-manager` 时，请先完成[旧组合开发版迁移](#从旧组合开发版迁移)。
+
+### 通过 DSH 插件管理安装（推荐）
+
+1. 打开 DSH 的插件管理页面，选择从 npm 添加或安装插件。
+2. 输入下面的完整包名并安装。
+3. 安装完成后启用 **dsh-knowledge-base**，按 DSH 返回的应用结果刷新页面或完成后续操作，从侧边栏“笔记”进入。
 
 ```text
 @lokinko/dsh-knowledge-base@0.1.0
 ```
 
-支持插件管理工具的 DSH 会话也可使用以下 `plugin_manager` 参数：
+### 让 DSH 助手安装
 
-```json
-{"action":"install_bundle","target":"@lokinko/dsh-knowledge-base@0.1.0"}
+在提供插件管理工具的 DSH 会话中，可以直接发送：
+
+```text
+请通过插件管理安装并启用 @lokinko/dsh-knowledge-base@0.1.0。
 ```
 
-安装后启用 **dsh-knowledge-base**，从侧边栏“笔记”进入。按 DSH 返回的应用结果完成刷新或后续操作。发布包包含预构建的 Host 与 Client 入口，无需自行编译。
+对应的 `plugin_manager` 调用参数为：
+
+```json
+{"action":"install_bundle","target":"@lokinko/dsh-knowledge-base@0.1.0","enabled":true}
+```
+
+### 从源码安装
+
+在运行 DSH 的 Host 电脑上克隆仓库并构建：
+
+```sh
+git clone https://github.com/lokinko/dsh-knowledge-base.git
+cd dsh-knowledge-base
+npm ci --ignore-scripts
+npm run build
+```
+
+然后通过 DSH 的插件管理工具安装仓库的**绝对路径**。例如，仓库位于 `D:\code\dsh-knowledge-base` 时：
+
+```json
+{"action":"install_bundle","target":"D:\\code\\dsh-knowledge-base","enabled":true}
+```
+
+将示例路径替换为 Host 上实际的仓库路径。安装后启用插件并从侧边栏“笔记”进入；后续修改源码时，先重新构建，再通过 DSH 插件管理重新应用。
 
 ## 数据保存与目录切换
 
