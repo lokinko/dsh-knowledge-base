@@ -1,0 +1,9 @@
+Copyright (c) 2026 lokinko. All rights reserved.
+
+No open-source license has been granted for the original dsh-knowledge-base code in this
+release. Public availability of this repository or npm package does not grant
+additional rights to use, modify or redistribute that original code.
+
+Bundled and externally installed third-party components remain governed by
+their respective licenses. See THIRD_PARTY_NOTICES.md and the license files
+provided by installed dependencies.

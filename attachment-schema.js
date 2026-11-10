@@ -1,0 +1,3 @@
+import {z} from 'zod';
+export const fileRefSchema=z.object({attachmentId:z.string().min(1),name:z.string(),bytes:z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER)}).strict();
+export const attachmentSchema=z.object({id:z.string().uuid(),ownerType:z.enum(['note','task']),ownerId:z.string().uuid(),name:z.string().min(1).max(255),mediaType:z.string().min(1).max(120),size:z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER),sha256:z.string().regex(/^[a-f0-9]{64}$/),ref:fileRefSchema,revision:z.number().int().positive().max(Number.MAX_SAFE_INTEGER),createdAt:z.iso.datetime({offset:true}),removedAt:z.union([z.literal(''),z.iso.datetime({offset:true})])}).strict().refine(value=>value.size===value.ref.bytes,'Attachment byte length mismatch');

@@ -1,0 +1,20 @@
+{
+  "name": "@lokinko/dsh-knowledge-base",
+  "version": "0.1.0",
+  "description": "Independent Markdown notes, original file attachments and native AI coauthoring for DeepSeek Harness.",
+  "type": "module",
+  "license": "UNLICENSED",
+  "author": "lokinko",
+  "repository": {"type": "git", "url": "git+https://github.com/lokinko/dsh-knowledge-base.git"},
+  "homepage": "https://github.com/lokinko/dsh-knowledge-base#readme",
+  "bugs": {"url": "https://github.com/lokinko/dsh-knowledge-base/issues"},
+  "keywords": ["dsh", "deepseek-harness", "notes", "attachments", "markdown", "cordis"],
+  "engines": {"node": ">=22", "dsh": "0.2.2-rc.1"},
+  "publishConfig": {"access": "public", "registry": "https://registry.npmjs.org/"},
+  "exports": {".": "./index.js", "./client": "./client.js", "./locale/*.json": "./locale/*.json", "./icon": "./icon.svg"},
+  "files": ["index.js", "client.js", "cordis.patch.yml", "locale/*.json", "icon.svg", "THIRD_PARTY_NOTICES.md"],
+  "scripts": {"build": "node scripts/build.mjs", "test": "node scripts/test.mjs", "check:release": "node scripts/check-release.mjs", "prepack": "npm run build && npm test && npm run check:release"},
+  "dependencies": {"zod": "4.4.3"},
+  "devDependencies": {"bootstrap": "5.3.8", "esbuild": "0.28.2", "highlight.js": "11.12.0", "katex": "0.19.1", "markdown-it": "15.0.3", "markdown-it-texmath": "1.0.0", "postcss": "8.5.32"},
+  "dsh": {"bundle": {"patch": "./cordis.patch.yml"}, "client": {"platform": "web", "immediately": true, "inject": ["@deepseek-ai/dsh-client-ui-conversation"]}}
+}

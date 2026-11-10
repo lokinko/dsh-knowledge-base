@@ -1,0 +1,11 @@
+import assert from 'node:assert/strict';
+import {apply} from './index.js';
+const tables=new Map(),routes=new Map(),tools=new Map(),effects=[];
+await apply({storageDomain:{async open(spec){return {table(name){if(!tables.has(name))tables.set(name,new Map());const rows=tables.get(name);return {get:key=>rows.get(key),entries:()=>rows.entries(),async put(key,value){rows.set(key,spec.tables[name].valueSchema.parse(value));},async delete(key){rows.delete(key);}};},async close(){}};}},connection:{fetch:{register(route){routes.set(route.path,route);return()=>routes.delete(route.path);}}},tools:{register(tool){tools.set(tool.name,tool);return()=>tools.delete(tool.name);}},effect(fn){effects.push(fn());}});
+const route=routes.get('/api/dsh-note/notes'),tool=tools.get('manage_notes');assert.equal(route.requestBody,'streaming');assert.equal(tool.parameters.properties.content.maxLength,undefined);
+const content='阅读正文\r\n    code();\n'.repeat(300000).slice(0,5000000);
+assert.equal(content.length,5000000);
+const response=await route.fetch(new Request('http://localhost/api/dsh-note/notes',{method:'POST',body:JSON.stringify({action:'create',title:'Compiled Host fixture',content})}));assert.equal(response.status,200);const created=await response.json();
+const tail=await tool.execute({action:'get',id:created.note.id,contentOffset:4999900,contentLimit:50000});assert.equal(tail.note.content,content.slice(4999900));assert.equal(tail.note.contentLength,5000000);assert.equal(tail.note.nextContentOffset,null);
+for(const effect of effects.reverse())await(await effect)?.();assert.equal(routes.size,0);assert.equal(tools.size,0);
+console.log('PASS: production prebuilt Host notes schema, streaming POST and installed tool preserve 5,000,000 characters and tail offsets; complete context cleanup. In-memory fixtures only.');
