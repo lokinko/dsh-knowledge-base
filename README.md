@@ -2,7 +2,7 @@
 
 dsh-knowledge-base 是 DeepSeek Harness 中可独立安装的笔记插件。它提供 Markdown 笔记、附件、历史版本和 DSH 原生 AI 共写，资料保存在运行 DSH 的 Host 电脑上。
 
-产品暂定名为 **dsh-knowledge-base**，当前源码版本为 **0.1.0**。npm 包尚未发布；包名暂定为 `@lokinko/dsh-knowledge-base`，以下 npm 安装示例供正式发布后使用。
+产品暂定名为 **dsh-knowledge-base**，当前版本为 **0.1.0**，npm 包名为 `@lokinko/dsh-knowledge-base`。Git 发布标签与 npm 包使用相同版本号。
 
 ## 功能
 
@@ -51,7 +51,7 @@ PDF 附件当前提供打开和下载功能，不提供文本提取或 OCR。
 
 ## 安装
 
-正式发布并确认包名后，在 DSH 的插件管理中选择从 npm 安装，填写：
+在 DSH 的插件管理中选择从 npm 安装，填写：
 
 ```text
 @lokinko/dsh-knowledge-base@0.1.0
@@ -63,7 +63,7 @@ PDF 附件当前提供打开和下载功能，不提供文本提取或 OCR。
 {"action":"install_bundle","target":"@lokinko/dsh-knowledge-base@0.1.0"}
 ```
 
-安装后启用 **dsh-knowledge-base**，从侧边栏“笔记”进入。按 DSH 返回的应用结果完成刷新或后续操作。当前仓库提供源码及预构建入口，npm 安装需等包正式发布。
+安装后启用 **dsh-knowledge-base**，从侧边栏“笔记”进入。按 DSH 返回的应用结果完成刷新或后续操作。发布包包含预构建的 Host 与 Client 入口，无需自行编译。
 
 ## 数据保存与目录切换
 
