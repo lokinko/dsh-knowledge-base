@@ -1,0 +1,336 @@
+/* Plugin material and owned controls. Host theme and conversation tokens stay inherited.
+   Material: a misty ground, frosted glass for navigation, pure white for content. */
+.dn-workspace {
+  color-scheme: inherit;
+  --nb-ui-font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI Variable Text", "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei UI", "Microsoft YaHei", system-ui, sans-serif;
+  /* Ground and glass */
+  --nb-ground: #f2f3f5;
+  --nb-tint-a: #d3e1f4;
+  --nb-tint-b: #e6e1f2;
+  --nb-glass: rgb(255 255 255 / 50%);
+  --nb-glass-strong: rgb(255 255 255 / 86%);
+  --nb-blur: blur(28px) saturate(170%);
+  /* Surfaces */
+  --nb-panel: var(--nb-glass);
+  --nb-surface: #ffffff;
+  --nb-card: #ffffff;
+  --nb-popover: #ffffff;
+  --nb-reading: #ffffff;
+  /* Ink */
+  --nb-ink: #1d1d1f;
+  --nb-muted: #5e6067;
+  --nb-faint: #74767d;
+  /* Lines and states */
+  --nb-line: rgb(15 17 22 / 8%);
+  --nb-line-strong: rgb(15 17 22 / 14%);
+  --nb-rim: rgb(255 255 255 / 85%);
+  --nb-inner: rgb(255 255 255 / 40%);
+  --nb-edge: rgb(15 17 22 / 6%);
+  --nb-contact: rgb(15 17 22 / 5%);
+  --nb-lift: rgb(15 17 22 / 7%);
+  --nb-state: rgb(15 17 22 / 4.5%);
+  --nb-state-strong: rgb(15 17 22 / 7.5%);
+  --nb-field: rgb(15 17 22 / 4%);
+  --nb-primary: #1d1d1f;
+  --nb-on-primary: #ffffff;
+  --nb-accent: #2f6be0;
+  --nb-focus: #5d8ee8;
+  --nb-danger: #b3343d;
+  --nb-success: #2f7650;
+  --nb-link: #2f62b8;
+  --nb-mask: rgb(20 22 27 / 28%);
+  /* Geometry */
+  --nb-radius: 20px;
+  --nb-card-radius: 16px;
+  --nb-control-radius: 10px;
+  --nb-chip-radius: 8px;
+  /* Depth: hairline ring, contact and lift. Every shadow is composed from tokens. */
+  --nb-panel-shadow: 0 0 0 1px var(--nb-edge), 0 1px 2px var(--nb-contact), 0 16px 40px var(--nb-lift);
+  --nb-glass-shadow: inset 0 1px 0 var(--nb-rim), inset 0 0 0 1px var(--nb-inner), 0 1px 2px var(--nb-contact);
+  --nb-card-shadow: 0 0 0 1px var(--nb-edge), 0 1px 2px var(--nb-contact);
+  --nb-card-shadow-hover: 0 0 0 1px var(--nb-line-strong), 0 2px 4px var(--nb-contact), 0 12px 28px var(--nb-lift);
+  --nb-popover-shadow: 0 0 0 1px var(--nb-edge), 0 8px 24px var(--nb-lift), 0 32px 80px var(--nb-lift);
+  --nb-control-shadow: 0 0 0 .5px var(--nb-edge), 0 1px 2px var(--nb-contact), 0 1px 1px var(--nb-contact);
+  --tm-surface: var(--nb-reading);
+  --tm-panel: var(--nb-panel);
+  --tm-ink: var(--nb-ink);
+  --tm-muted: var(--nb-muted);
+  --tm-line: var(--nb-line);
+  --tm-accent: var(--nb-ink);
+  --tm-accent-soft: var(--nb-state);
+  --tm-hover: var(--nb-state);
+  background: var(--nb-ground);
+  color: var(--nb-ink);
+  font-family: var(--nb-ui-font);
+  font-size: 13px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+/* Explicit host markers also serve browsers without light-dark(). */
+:is(html.dark, html[data-theme="dark"], [data-theme="dark"]) .dn-workspace {
+  color-scheme: dark;
+  --nb-ground: #0f1012;
+  --nb-tint-a: #17202d;
+  --nb-tint-b: #1b1a25;
+  --nb-glass: rgb(255 255 255 / 4.5%);
+  --nb-glass-strong: rgb(255 255 255 / 10%);
+  --nb-surface: #18191c;
+  --nb-card: #1f2023;
+  --nb-popover: #222326;
+  --nb-reading: #18191c;
+  --nb-ink: #f2f2f3;
+  --nb-muted: #aeb0b7;
+  --nb-faint: #8f919a;
+  --nb-line: rgb(255 255 255 / 8%);
+  --nb-line-strong: rgb(255 255 255 / 15%);
+  --nb-rim: rgb(255 255 255 / 9%);
+  --nb-inner: rgb(255 255 255 / 3%);
+  --nb-edge: rgb(255 255 255 / 7%);
+  --nb-contact: rgb(0 0 0 / 30%);
+  --nb-lift: rgb(0 0 0 / 38%);
+  --nb-state: rgb(255 255 255 / 6%);
+  --nb-state-strong: rgb(255 255 255 / 10%);
+  --nb-field: rgb(255 255 255 / 6%);
+  --nb-primary: #f2f2f3;
+  --nb-on-primary: #1d1d1f;
+  --nb-accent: #7ea8f2;
+  --nb-focus: #7ea8f2;
+  --nb-danger: #f18c92;
+  --nb-success: #88cba7;
+  --nb-link: #9cbce9;
+  --nb-mask: rgb(0 0 0 / 55%);
+}
+:is(html.light, html[data-theme="light"], [data-theme="light"]) .dn-workspace {
+  color-scheme: light;
+}
+@supports (color: light-dark(white, black)) {
+  .dn-workspace,
+  :is(html.dark, html[data-theme="dark"], [data-theme="dark"]) .dn-workspace {
+    --nb-ground: light-dark(#f2f3f5, #0f1012);
+    --nb-tint-a: light-dark(#d3e1f4, #17202d);
+    --nb-tint-b: light-dark(#e6e1f2, #1b1a25);
+    --nb-glass: light-dark(rgb(255 255 255 / 50%), rgb(255 255 255 / 4.5%));
+    --nb-glass-strong: light-dark(rgb(255 255 255 / 86%), rgb(255 255 255 / 10%));
+    --nb-surface: light-dark(#ffffff, #18191c);
+    --nb-card: light-dark(#ffffff, #1f2023);
+    --nb-popover: light-dark(#ffffff, #222326);
+    --nb-reading: light-dark(#ffffff, #18191c);
+    --nb-ink: light-dark(#1d1d1f, #f2f2f3);
+    --nb-muted: light-dark(#5e6067, #aeb0b7);
+    --nb-faint: light-dark(#74767d, #8f919a);
+    --nb-line: light-dark(rgb(15 17 22 / 8%), rgb(255 255 255 / 8%));
+    --nb-line-strong: light-dark(rgb(15 17 22 / 14%), rgb(255 255 255 / 15%));
+    --nb-rim: light-dark(rgb(255 255 255 / 85%), rgb(255 255 255 / 9%));
+    --nb-inner: light-dark(rgb(255 255 255 / 40%), rgb(255 255 255 / 3%));
+    --nb-edge: light-dark(rgb(15 17 22 / 6%), rgb(255 255 255 / 7%));
+    --nb-contact: light-dark(rgb(15 17 22 / 5%), rgb(0 0 0 / 30%));
+    --nb-lift: light-dark(rgb(15 17 22 / 7%), rgb(0 0 0 / 38%));
+    --nb-state: light-dark(rgb(15 17 22 / 4.5%), rgb(255 255 255 / 6%));
+    --nb-state-strong: light-dark(rgb(15 17 22 / 7.5%), rgb(255 255 255 / 10%));
+    --nb-field: light-dark(rgb(15 17 22 / 4%), rgb(255 255 255 / 6%));
+    --nb-primary: light-dark(#1d1d1f, #f2f2f3);
+    --nb-on-primary: light-dark(#ffffff, #1d1d1f);
+    --nb-accent: light-dark(#2f6be0, #7ea8f2);
+    --nb-focus: light-dark(#5d8ee8, #7ea8f2);
+    --nb-danger: light-dark(#b3343d, #f18c92);
+    --nb-success: light-dark(#2f7650, #88cba7);
+    --nb-link: light-dark(#2f62b8, #9cbce9);
+    --nb-mask: light-dark(rgb(20 22 27 / 28%), rgb(0 0 0 / 55%));
+  }
+}
+.dn-workspace.em-page {
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+/* Controls: quiet by default. Fill and depth appear only where they carry meaning. */
+.dn-workspace :is(.em-icon, .em-btn, .nb-workspace-tab, .nb-nav-item, .nb-new, .em-md-toggle, .nb-mobile-back, .btn):not(.nb-native-conversation *) {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 32px;
+  padding: 6px 12px;
+  border: 1px solid transparent;
+  border-radius: var(--nb-control-radius);
+  background: var(--nb-field);
+  color: var(--nb-ink);
+  box-shadow: none;
+  font: 500 12.5px/1.5 var(--nb-ui-font);
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color 140ms ease, color 140ms ease, box-shadow 140ms ease;
+}
+.dn-workspace :is(.em-icon, .nb-nav-item, .nb-workspace-tab, .em-md-toggle, .nb-mobile-back):not(.nb-native-conversation *) {
+  background: transparent;
+}
+.dn-workspace .em-icon:not(.nb-native-conversation *) {
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  padding: 0;
+  flex-shrink: 0;
+  color: var(--nb-muted);
+}
+.dn-workspace .em-icon:not(.nb-native-conversation *) > svg {
+  flex-shrink: 0;
+}
+.dn-workspace :is(.em-icon, .em-btn, .nb-workspace-tab, .nb-nav-item, .em-md-toggle, .nb-mobile-back, .btn):not(.nb-native-conversation *):is(:hover, [aria-pressed="true"], .is-active) {
+  border-color: transparent;
+  background: var(--nb-state);
+  color: var(--nb-ink);
+  box-shadow: none;
+}
+.dn-workspace :is(.em-btn, .btn):not(.em-icon, .nb-native-conversation *):hover {
+  background: var(--nb-state-strong);
+}
+.dn-workspace :is(.btn-primary, .em-save):not(.nb-native-conversation *) {
+  border-color: transparent;
+  background: var(--nb-primary);
+  color: var(--nb-on-primary);
+  box-shadow: 0 1px 2px var(--nb-contact);
+}
+.dn-workspace :is(.btn-primary, .em-save):not(.nb-native-conversation *):hover {
+  background: var(--nb-primary);
+  color: var(--nb-on-primary);
+  filter: brightness(1.15);
+}
+.dn-workspace :is(.em-icon, .em-btn, .nb-workspace-tab, .nb-nav-item, .nb-new, .em-md-toggle, .nb-mobile-back, .btn):not(.nb-native-conversation *):disabled {
+  opacity: .42;
+  cursor: not-allowed;
+  filter: none;
+}
+/* Fields: filled, borderless; they lift to white with a ring when focused. */
+.dn-workspace :is(.nb-search, .nb-mobile-category, .nb-properties input, .nb-properties select, .em-font-select, .nb-context-query input, .nb-context-query select, .nb-storage-path, .form-control, .form-select):not(.nb-native-conversation *) {
+  box-sizing: border-box;
+  min-width: 0;
+  min-height: 36px;
+  padding: 8px 12px;
+  border: 1px solid transparent;
+  border-radius: var(--nb-control-radius);
+  background-color: var(--nb-field);
+  color: var(--nb-ink);
+  box-shadow: none;
+  font: 13px/1.5 var(--nb-ui-font);
+  transition: background-color 140ms ease, box-shadow 140ms ease, border-color 140ms ease;
+}
+.dn-workspace :is(.nb-search, .nb-properties input, .nb-properties select, .nb-context-query input, .nb-context-query select, .nb-storage-path, .form-control, .form-select):not(.nb-native-conversation *):hover {
+  background-color: var(--nb-state-strong);
+}
+.dn-workspace :is(.nb-search, .nb-mobile-category, .nb-properties input, .nb-properties select, .nb-context-query input, .nb-context-query select, .nb-storage-path, .form-control, .form-select):not(.nb-native-conversation *):focus {
+  border-color: var(--nb-line-strong);
+  background-color: var(--nb-surface);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--nb-focus) 22%, transparent);
+  outline: none;
+}
+.dn-workspace :is(.nb-search, .nb-properties input, .nb-context-query input, .nb-storage-path, .form-control):not(.nb-native-conversation *)::placeholder {
+  color: var(--nb-faint);
+  opacity: 1;
+}
+.dn-workspace :is(.em-icon, .em-btn, .nb-workspace button, .nb-workspace input, .nb-workspace select, .nb-workspace textarea, .nb-workspace-tab, .em-md-toggle, .em-font-select, .em-font-range, .nb-context-page button, .nb-context-page input, .nb-context-page select, .nb-coauthor-controls button, .nb-coauthor-empty button, .nb-storage-dialog button, .nb-storage-dialog input, .nb-history-dialog button):not(.nb-native-conversation *):focus-visible {
+  outline: 2px solid var(--nb-focus);
+  outline-offset: 2px;
+}
+.dn-workspace :is(.em-text-error, .nb-warning) {
+  margin: 0;
+  padding: 8px 14px;
+  color: var(--nb-danger);
+  font-size: 12px;
+}
+.dn-workspace :is(.nb-muted, .em-md-empty) {
+  color: var(--nb-muted);
+  font-size: 13px;
+}
+.dn-workspace .badge:not(.nb-native-conversation *) {
+  padding: 2px 8px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--nb-field);
+  color: var(--nb-muted);
+  font: 500 11px/1.6 var(--nb-ui-font);
+}
+/* Bootstrap supplies structure only; its local palette follows this material. */
+.dn-workspace .tm-bs:not(.nb-native-conversation *) {
+  --bs-body-bg: transparent;
+  --bs-body-color: var(--nb-ink);
+  --bs-heading-color: var(--nb-ink);
+  --bs-emphasis-color: var(--nb-ink);
+  --bs-secondary-color: var(--nb-muted);
+  --bs-border-color: var(--nb-line);
+  --bs-body-font-family: var(--nb-ui-font);
+  --bs-link-color: var(--nb-link);
+  --bs-link-hover-color: var(--nb-link);
+}
+.dn-workspace .btn:not(.nb-native-conversation *) {
+  --bs-btn-color: var(--nb-ink);
+  --bs-btn-bg: var(--nb-field);
+  --bs-btn-border-color: transparent;
+  --bs-btn-hover-color: var(--nb-ink);
+  --bs-btn-hover-bg: var(--nb-state);
+  --bs-btn-hover-border-color: transparent;
+  --bs-btn-active-color: var(--nb-ink);
+  --bs-btn-active-bg: var(--nb-state);
+  --bs-btn-active-border-color: transparent;
+  --bs-btn-disabled-color: var(--nb-faint);
+  --bs-btn-disabled-bg: var(--nb-field);
+  --bs-btn-disabled-border-color: transparent;
+}
+@supports not (backdrop-filter: blur(1px)) {
+  .dn-workspace,
+  :is(html.dark, html[data-theme="dark"], [data-theme="dark"]) .dn-workspace {
+    --nb-glass: var(--nb-ground);
+    --nb-glass-strong: var(--nb-surface);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dn-workspace :is(.em-icon, .em-btn, .nb-workspace-tab, .nb-nav-item, .nb-new, .em-md-toggle, .nb-mobile-back, .nb-note-row, .btn):not(.nb-native-conversation *) {
+    transition: none;
+    animation: none;
+    scroll-behavior: auto;
+  }
+}
+@media (forced-colors: active) {
+  .dn-workspace,
+  :is(html.dark, html[data-theme="dark"], [data-theme="dark"]) .dn-workspace {
+    --nb-ground: Canvas;
+    --nb-tint-a: Canvas;
+    --nb-tint-b: Canvas;
+    --nb-glass: Canvas;
+    --nb-glass-strong: Canvas;
+    --nb-panel: Canvas;
+    --nb-surface: Canvas;
+    --nb-card: Canvas;
+    --nb-popover: Canvas;
+    --nb-reading: Canvas;
+    --nb-ink: CanvasText;
+    --nb-muted: CanvasText;
+    --nb-faint: CanvasText;
+    --nb-line: ButtonBorder;
+    --nb-line-strong: ButtonBorder;
+    --nb-state: ButtonFace;
+    --nb-state-strong: ButtonFace;
+    --nb-field: Field;
+    --nb-primary: ButtonText;
+    --nb-on-primary: ButtonFace;
+    --nb-accent: Highlight;
+    --nb-focus: Highlight;
+    --nb-danger: LinkText;
+    --nb-success: LinkText;
+    --nb-link: LinkText;
+    --nb-panel-shadow: none;
+    --nb-glass-shadow: none;
+    --nb-card-shadow: none;
+    --nb-card-shadow-hover: none;
+    --nb-popover-shadow: none;
+    --nb-control-shadow: none;
+  }
+  .dn-workspace :is(.nb-nav-item.is-active, .nb-workspace-tab[aria-pressed="true"], .em-md-toggle[aria-pressed="true"], .nb-layout-switch button[aria-pressed="true"], .nb-filter-chip[aria-pressed="true"], .nb-collection-link[aria-current="true"], .nb-collection-link[aria-current="location"], .nb-outline-link[aria-current="true"], .nb-outline-link[aria-current="location"], .nb-note-row.is-active, .nb-context-result.is-active, .nb-version.is-active) {
+    outline: 1px solid Highlight;
+    outline-offset: -2px;
+  }
+  .dn-workspace :is(.nb-categories, .nb-list-panel, .nb-document-panel, .nb-coauthor, .nb-note-row, .nb-search, .form-control, .form-select) {
+    border: 1px solid ButtonBorder;
+  }
+}

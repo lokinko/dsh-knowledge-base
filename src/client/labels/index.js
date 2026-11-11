@@ -1,0 +1,10 @@
+import base from './base.json';
+import catalog0 from './notes-labels.json';
+import catalog1 from './note-storage-labels.json';
+import catalog2 from './notebook-studio-labels.json';
+import catalog3 from './attachment-labels.json';
+import catalog4 from './category-labels.json';
+import catalog5 from './navigation-labels.json';
+import catalog6 from './workbench-labels.json';
+import catalog7 from './topics-labels.json';
+export const dictionaries=Object.fromEntries(['zh','en'].map(language=>[language,Object.assign({},base[language],catalog0[language],catalog1[language],catalog2[language],catalog3[language],catalog4[language],catalog5[language],catalog6[language],catalog7[language])]));

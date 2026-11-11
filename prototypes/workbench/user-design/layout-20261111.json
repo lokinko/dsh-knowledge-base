@@ -1,0 +1,1434 @@
+{
+  "format": "dsh-workbench-prototype",
+  "version": 1,
+  "layout": {
+    "version": 1,
+    "nodes": [
+      {
+        "id": "workspace",
+        "type": "container",
+        "name": "工作区",
+        "parentId": null,
+        "scene": "shared",
+        "props": {
+          "hidden": false,
+          "width": "fill",
+          "height": "fill",
+          "direction": "column",
+          "wrap": false,
+          "gap": 0,
+          "padding": 0,
+          "margin": 0,
+          "fontSize": 14,
+          "align": "stretch",
+          "overflow": "hidden",
+          "note": ""
+        }
+      },
+      {
+        "id": "global-nav",
+        "type": "container",
+        "name": "全局导航",
+        "parentId": "workspace",
+        "scene": "shared",
+        "props": {
+          "hidden": true,
+          "width": "auto",
+          "height": 64,
+          "direction": "row",
+          "wrap": false,
+          "gap": 12,
+          "padding": 16,
+          "margin": 0,
+          "fontSize": 14,
+          "align": "center",
+          "overflow": "visible",
+          "note": ""
+        },
+        "mobile": {
+          "height": "auto",
+          "direction": "row",
+          "wrap": true,
+          "padding": 12,
+          "gap": 8,
+          "align": "center"
+        }
+      },
+      {
+        "id": "brand",
+        "type": "text",
+        "name": "品牌",
+        "parentId": "global-nav",
+        "scene": "shared",
+        "props": {
+          "hidden": true,
+          "width": "auto",
+          "height": "auto",
+          "direction": "column",
+          "wrap": false,
+          "gap": 12,
+          "padding": 0,
+          "margin": 0,
+          "fontSize": 17,
+          "align": "stretch",
+          "overflow": "visible",
+          "note": "",
+          "text": "DSH NOTEBOOK"
+        }
+      },
+      {
+        "id": "nav-library",
+        "type": "button",
+        "name": "笔记页签",
+        "parentId": "global-nav",
+        "scene": "shared",
+        "props": {
+          "hidden": true,
+          "width": "auto",
+          "height": "auto",
+          "direction": "column",
+          "wrap": false,
+          "gap": 12,
+          "padding": 0,
+          "margin": 0,
+          "fontSize": 14,
+          "align": "stretch",
+          "overflow": "visible",
+          "note": "",
+          "text": "笔记"
+        }
+      },
+      {
+        "id": "nav-topics",
+        "type": "button",
+        "name": "待整理页签",
+        "parentId": "global-nav",
+        "scene": "shared",
+        "props": {
+          "hidden": true,
+          "width": "auto",
+          "height": "auto",
+          "direction": "column",
+          "wrap": false,
+          "gap": 12,
+          "padding": 0,
+          "margin": 0,
+          "fontSize": 14,
+          "align": "stretch",
+          "overflow": "visible",
+          "note": "",
+          "text": "待整理"
+        }
+      },
+      {
+        "id": "nav-search",
+        "type": "input",
+        "name": "全局搜索",
+        "parentId": "global-nav",
+        "scene": "shared",
+        "props": {
+          "hidden": true,
+          "width": "fill",
+          "height": "auto",
+          "direction": "column",
+          "wrap": false,
+          "gap": 12,
+          "padding": 0,
+          "margin": 0,
+          "fontSize": 14,
+          "align": "stretch",
+          "overflow": "visible",
+          "note": "",
+          "text": "搜索笔记与讨论…"
+        },
+        "mobile": {
+          "width": "fill"
+        }
+      },
+      {
+        "id": "nav-actions",
+        "type": "container",
+        "name": "全局操作",
+        "parentId": "global-nav",
+        "scene": "shared",
+        "props": {
+          "hidden": false,
+          "width": "auto",
+          "height": "auto",
+          "direction": "row",
+          "wrap": false,
+          "gap": 8,
+          "padding": 0,
+          "margin": 0,
+          "fontSize": 14,
+          "align": "stretch",
+          "overflow": "visible",
+          "note": ""
+        },
+        "mobile": {
+          "hidden": true
+        }
+      },
+      {
+        "id": "action-settings",
+        "type": "button",
+        "name": "设置",
+        "parentId": "nav-actions",
+        "scene": "shared",
+        "props": {
+          "hidden": true,
+          "width": "auto",
+          "height": "auto",
+          "direction": "column",
+          "wrap": false,
+          "gap": 12,
+          "padding": 0,
+          "margin": 0,
+          "fontSize": 14,
+          "align": "stretch",
+          "overflow": "visible",
+          "note": "",
+          "text": "设置"
+        }
+      },
+      {
+        "id": "scene-host",
+        "type": "container",
+        "name": "场景区域",
+        "parentId": "workspace",
+        "scene": "shared",
+        "props": {
+          "hidden": false,
+          "width": "fill",
+          "height": "fill",
+          "direction": "column",
+          "wrap": false,
+          "gap": 0,
+          "padding": 0,
+          "margin": 0,
+          "fontSize": 14,
+          "align": "stretch",
+          "overflow": "auto",
+          "note": ""
+        }
+      },
+      {
+        "id": "scene-library",
+        "type": "container",
+        "name": "笔记库场景",
+        "parentId": "scene-host",
+        "scene": "library",
+        "props": {
+          "hidden": false,
+          "width": "fill",
+          "height": "fill",
+          "direction": "row",
+          "wrap": false,
+          "gap": 18,
+          "padding": 20,
+          "margin": 0,
+          "fontSize": 14,
+          "align": "stretch",
+          "overflow": "visible",
+          "note": ""
+        },
+        "mobile": {
+          "direction": "column",
+          "height": "auto",
+          "padding": 12,
+          "gap": 12
+        }
+      },
+      {
+        "id": "library-sidebar",
+        "type": "container",
+        "name": "分类侧栏",
+        "parentId": "scene-library",
+        "scene": "library",
+        "props": {
+          "hidden": false,
+          "width": 160,
+          "height": "auto",
+          "direction": "column",
+          "wrap": false,
+          "gap": 14,
+          "padding": 0,
+          "margin": 0,
+          "fontSize": 14,
+          "align": "stretch",
+          "overflow": "visible",
+          "note": ""
+        },
+        "mobile": {
+          "width": "fill",
+          "height": "auto"
+        }
+      },
+      {
+        "id": "category-search",
+        "type": "input",
+        "name": "分类搜索",
+        "parentId": "library-sidebar",
+        "scene": "library",
+        "props": {
+          "hidden": true,
+          "width": "auto",
+          "height": "auto",
+          "direction": "column",
+          "wrap": false,
+          "gap": 12,
+          "padding": 0,
+          "margin": 0,
+          "fontSize": 14,
+          "align": "stretch",
+          "overflow": "visible",
+          "note": "",
+          "text": "筛选分类…"
+        }
+      },
+      {
+        "id": "folder-tree",
+        "type": "content",
+        "name": "文件夹树",
+        "parentId": "library-sidebar",
+        "scene": "library",
+        "props": {
+          "hidden": false,
+          "width": 160,
+          "height": "fill",
+          "direction": "column",
+          "wrap": false,
+          "gap": 12,
+          "padding": 0,
+          "margin": 0,
+          "fontSize": 14,
+          "align": "stretch",
+          "overflow": "auto",
+          "note": "",
+          "role": "folders"
+        },
+        "mobile": {
+          "height": 140
+        }
+      },
+      {
+        "id": "library-main",
+        "type": "container",
+        "name": "笔记库主区",
+        "parentId": "scene-library",
+        "scene": "library",
+        "props": {
+          "hidden": false,
+          "width": "fill",
+          "height": "fill",
+          "direction": "column",
+          "wrap": false,
+          "gap": 18,
+          "padding": 0,
+          "margin": 0,
+          "fontSize": 14,
+          "align": "stretch",
+          "overflow": "visible",
+          "note": ""
+        },
+        "mobile": {
+          "height": "auto"
+        }
+      },
+      {
+        "id": "library-toolbar",
+        "type": "container",
+        "name": "笔记库工具栏",
+        "parentId": "library-main",
+        "scene": "library",
+        "props": {
+          "hidden": false,
+          "width": "auto",
+          "height": "auto",
+          "direction": "row",
+          "wrap": false,
+          "gap": 10,
+          "padding": 0,
+          "margin": 0,
+          "fontSize": 14,
+          "align": "center",
+          "overflow": "visible",
+          "note": ""
+        },
+        "mobile": {
+          "direction": "column",
+          "align": "stretch"
+        }
+      },
+      {
+        "id": "new-note",
+        "type": "button",
+        "name": "新建笔记",
+        "parentId": "library-toolbar",
+        "scene": "library",
+        "props": {
+          "hidden": false,
+          "width": "auto",
+          "height": "auto",
+          "direction": "column",
+          "wrap": false,
+          "gap": 12,
+          "padding": 0,
+          "margin": 0,
+          "fontSize": 14,
+          "align": "stretch",
+          "overflow": "visible",
+          "note": "",
+          "text": "新建笔记"
+        }
+      },
+      {
+        "id": "search-notes",
+        "type": "input",
+        "name": "搜索笔记",
+        "parentId": "library-toolbar",
+        "scene": "library",
+        "props": {
+          "hidden": true,
+          "width": "fill",
+          "height": "auto",
+          "direction": "column",
+          "wrap": false,
+          "gap": 12,
+          "padding": 0,
+          "margin": 0,
+          "fontSize": 14,
+          "align": "stretch",
+          "overflow": "visible",
+          "note": "",
+          "text": "搜索标题、正文、标签…"
+        }
+      },
+      {
+        "id": "library-view",
+        "type": "button",
+        "name": "切换视图",
+        "parentId": "library-toolbar",
+        "scene": "library",
+        "props": {
+          "hidden": true,
+          "width": "auto",
+          "height": "auto",
+          "direction": "column",
+          "wrap": false,
+          "gap": 12,
+          "padding": 0,
+          "margin": 0,
+          "fontSize": 14,
+          "align": "stretch",
+          "overflow": "visible",
+          "note": "",
+          "text": "切换视图"
+        }
+      },
+      {
+        "id": "library-grid",
+        "type": "content",
+        "name": "笔记卡片",
+        "parentId": "library-main",
+        "scene": "library",
+        "props": {
+          "hidden": false,
+          "width": "fill",
+          "height": "fill",
+          "direction": "column",
+          "wrap": false,
+          "gap": 16,
+          "padding": 0,
+          "margin": 0,
+          "fontSize": 14,
+          "align": "stretch",
+          "overflow": "visible",
+          "note": "",
+          "role": "note-cards"
+        },
+        "mobile": {
+          "height": "auto"
+        }
+      },
+      {
+        "id": "scene-read",
+        "type": "container",
+        "name": "阅读场景",
+        "parentId": "scene-host",
+        "scene": "read",
+        "props": {
+          "hidden": false,
+          "width": "fill",
+          "height": "fill",
+          "direction": "row",
+          "wrap": false,
+          "gap": 18,
+          "padding": 20,
+          "margin": 0,
+          "fontSize": 14,
+          "align": "stretch",
+          "overflow": "visible",
+          "note": ""
+        },
+        "mobile": {
+          "direction": "column",
+          "height": "auto",
+          "padding": 12,
+          "gap": 12
+        }
+      },
+      {
+        "id": "read-sidebar",
+        "type": "container",
+        "name": "笔记列表侧栏",
+        "parentId": "scene-read",
+        "scene": "read",
+        "props": {
+          "hidden": true,
+          "width": 205,
+          "height": "auto",
+          "direction": "column",
+          "wrap": false,
+          "gap": 12,
+          "padding": 0,
+          "margin": 0,
+          "fontSize": 14,
+          "align": "stretch",
+          "overflow": "visible",
+          "note": ""
+        },
+        "mobile": {
+          "width": "fill",
+          "height": 160
+        }
+      },
+      {
+        "id": "read-note-list",
+        "type": "content",
+        "name": "笔记列表",
+        "parentId": "read-sidebar",
+        "scene": "read",
+        "props": {
+          "hidden": true,
+          "width": "auto",
+          "height": "fill",
+          "direction": "column",
+          "wrap": false,
+          "gap": 12,
+          "padding": 0,
+          "margin": 0,
+          "fontSize": 14,
+          "align": "stretch",
+          "overflow": "auto",
+          "note": "",
+          "role": "note-list"
+        }
+      },
+      {
+        "id": "read-main",
+        "type": "container",
+        "name": "阅读主区",
+        "parentId": "scene-read",
+        "scene": "read",
+        "props": {
+          "hidden": false,
+          "width": "fill",
+          "height": "fill",
+          "direction": "column",
+          "wrap": false,
+          "gap": 18,
+          "padding": 0,
+          "margin": 0,
+          "fontSize": 14,
+          "align": "stretch",
+          "overflow": "visible",
+          "note": ""
+        },
+        "mobile": {
+          "height": "auto"
+        }
+      },
+      {
+        "id": "read-header",
+        "type": "container",
+        "name": "文档标题栏",
+        "parentId": "read-main",
+        "scene": "read",
+        "props": {
+          "hidden": false,
+          "width": "auto",
+          "height": "auto",
+          "direction": "row",
+          "wrap": false,
+          "gap": 14,
+          "padding": 0,
+          "margin": 0,
+          "fontSize": 14,
+          "align": "center",
+          "overflow": "visible",
+          "note": ""
+        },
+        "mobile": {
+          "direction": "column",
+          "align": "stretch"
+        }
+      },
+      {
+        "id": "read-title",
+        "type": "text",
+        "name": "文档标题",
+        "parentId": "read-header",
+        "scene": "read",
+        "props": {
+          "hidden": false,
+          "width": "fill",
+          "height": "auto",
+          "direction": "column",
+          "wrap": false,
+          "gap": 12,
+          "padding": 0,
+          "margin": 0,
+          "fontSize": 24,
+          "align": "stretch",
+          "overflow": "visible",
+          "note": "",
+          "text": "把值得留下的内容，放在这里"
+        },
+        "mobile": {
+          "fontSize": 21
+        }
+      },
+      {
+        "id": "read-actions",
+        "type": "container",
+        "name": "文档操作",
+        "parentId": "read-header",
+        "scene": "read",
+        "props": {
+          "hidden": false,
+          "width": "auto",
+          "height": "auto",
+          "direction": "row",
+          "wrap": false,
+          "gap": 8,
+          "padding": 0,
+          "margin": 0,
+          "fontSize": 14,
+          "align": "stretch",
+          "overflow": "visible",
+          "note": ""
+        }
+      },
+      {
+        "id": "read-edit",
+        "type": "button",
+        "name": "进入编辑",
+        "parentId": "read-actions",
+        "scene": "read",
+        "props": {
+          "hidden": false,
+          "width": "auto",
+          "height": "auto",
+          "direction": "column",
+          "wrap": false,
+          "gap": 12,
+          "padding": 0,
+          "margin": 0,
+          "fontSize": 14,
+          "align": "stretch",
+          "overflow": "visible",
+          "note": "",
+          "text": "编辑"
+        }
+      },
+      {
+        "id": "read-source",
+        "type": "button",
+        "name": "打开共创",
+        "parentId": "read-actions",
+        "scene": "read",
+        "props": {
+          "hidden": false,
+          "width": "auto",
+          "height": "auto",
+          "direction": "column",
+          "wrap": false,
+          "gap": 12,
+          "padding": 0,
+          "margin": 0,
+          "fontSize": 14,
+          "align": "stretch",
+          "overflow": "visible",
+          "note": "",
+          "text": "AI 共创"
+        }
+      },
+      {
+        "id": "read-document",
+        "type": "content",
+        "name": "正文阅读",
+        "parentId": "read-main",
+        "scene": "read",
+        "props": {
+          "hidden": false,
+          "width": "fill",
+          "height": "fill",
+          "direction": "column",
+          "wrap": false,
+          "gap": 12,
+          "padding": 20,
+          "margin": 0,
+          "fontSize": 16,
+          "align": "stretch",
+          "overflow": "auto",
+          "note": "",
+          "role": "document"
+        },
+        "mobile": {
+          "height": 500,
+          "padding": 12,
+          "fontSize": 16
+        }
+      },
+      {
+        "id": "read-outline",
+        "type": "content",
+        "name": "页内目录",
+        "parentId": "scene-read",
+        "scene": "read",
+        "props": {
+          "hidden": true,
+          "width": 180,
+          "height": "auto",
+          "direction": "column",
+          "wrap": false,
+          "gap": 12,
+          "padding": 0,
+          "margin": 0,
+          "fontSize": 14,
+          "align": "stretch",
+          "overflow": "visible",
+          "note": "",
+          "role": "outline"
+        },
+        "mobile": {
+          "width": "fill",
+          "hidden": true
+        }
+      },
+      {
+        "id": "read-coauthor",
+        "type": "content",
+        "name": "原生共创",
+        "parentId": "scene-read",
+        "scene": "read",
+        "props": {
+          "hidden": true,
+          "width": 310,
+          "height": "auto",
+          "direction": "column",
+          "wrap": false,
+          "gap": 12,
+          "padding": 0,
+          "margin": 0,
+          "fontSize": 14,
+          "align": "stretch",
+          "overflow": "visible",
+          "note": "",
+          "role": "chat"
+        },
+        "mobile": {
+          "width": "fill",
+          "height": 420,
+          "hidden": true
+        }
+      },
+      {
+        "id": "scene-edit",
+        "type": "container",
+        "name": "编辑场景",
+        "parentId": "scene-host",
+        "scene": "edit",
+        "props": {
+          "hidden": false,
+          "width": "fill",
+          "height": "fill",
+          "direction": "row",
+          "wrap": false,
+          "gap": 18,
+          "padding": 20,
+          "margin": 0,
+          "fontSize": 14,
+          "align": "stretch",
+          "overflow": "visible",
+          "note": ""
+        },
+        "mobile": {
+          "direction": "column",
+          "height": "auto",
+          "padding": 12,
+          "gap": 12
+        }
+      },
+      {
+        "id": "edit-sidebar",
+        "type": "container",
+        "name": "笔记列表侧栏",
+        "parentId": "scene-edit",
+        "scene": "edit",
+        "props": {
+          "hidden": true,
+          "width": 205,
+          "height": "auto",
+          "direction": "column",
+          "wrap": false,
+          "gap": 12,
+          "padding": 0,
+          "margin": 0,
+          "fontSize": 14,
+          "align": "stretch",
+          "overflow": "visible",
+          "note": ""
+        },
+        "mobile": {
+          "width": "fill",
+          "height": 160
+        }
+      },
+      {
+        "id": "edit-note-list",
+        "type": "content",
+        "name": "笔记列表",
+        "parentId": "edit-sidebar",
+        "scene": "edit",
+        "props": {
+          "hidden": true,
+          "width": "auto",
+          "height": "fill",
+          "direction": "column",
+          "wrap": false,
+          "gap": 12,
+          "padding": 0,
+          "margin": 0,
+          "fontSize": 14,
+          "align": "stretch",
+          "overflow": "auto",
+          "note": "",
+          "role": "note-list"
+        }
+      },
+      {
+        "id": "edit-main",
+        "type": "container",
+        "name": "编辑主区",
+        "parentId": "scene-edit",
+        "scene": "edit",
+        "props": {
+          "hidden": false,
+          "width": "fill",
+          "height": "fill",
+          "direction": "column",
+          "wrap": false,
+          "gap": 18,
+          "padding": 0,
+          "margin": 0,
+          "fontSize": 14,
+          "align": "stretch",
+          "overflow": "visible",
+          "note": ""
+        },
+        "mobile": {
+          "height": "auto"
+        }
+      },
+      {
+        "id": "edit-header",
+        "type": "container",
+        "name": "文档标题栏",
+        "parentId": "edit-main",
+        "scene": "edit",
+        "props": {
+          "hidden": false,
+          "width": "auto",
+          "height": "auto",
+          "direction": "row",
+          "wrap": false,
+          "gap": 14,
+          "padding": 0,
+          "margin": 0,
+          "fontSize": 14,
+          "align": "center",
+          "overflow": "visible",
+          "note": ""
+        },
+        "mobile": {
+          "direction": "column",
+          "align": "stretch"
+        }
+      },
+      {
+        "id": "edit-title",
+        "type": "text",
+        "name": "文档标题",
+        "parentId": "edit-header",
+        "scene": "edit",
+        "props": {
+          "hidden": false,
+          "width": "fill",
+          "height": "auto",
+          "direction": "column",
+          "wrap": false,
+          "gap": 12,
+          "padding": 0,
+          "margin": 0,
+          "fontSize": 24,
+          "align": "stretch",
+          "overflow": "visible",
+          "note": "",
+          "text": "把值得留下的内容，放在这里"
+        },
+        "mobile": {
+          "fontSize": 21
+        }
+      },
+      {
+        "id": "edit-actions",
+        "type": "container",
+        "name": "文档操作",
+        "parentId": "edit-header",
+        "scene": "edit",
+        "props": {
+          "hidden": false,
+          "width": "auto",
+          "height": "auto",
+          "direction": "row",
+          "wrap": false,
+          "gap": 8,
+          "padding": 0,
+          "margin": 0,
+          "fontSize": 14,
+          "align": "stretch",
+          "overflow": "visible",
+          "note": ""
+        }
+      },
+      {
+        "id": "edit-preview",
+        "type": "button",
+        "name": "预览笔记",
+        "parentId": "edit-actions",
+        "scene": "edit",
+        "props": {
+          "hidden": true,
+          "width": "auto",
+          "height": "auto",
+          "direction": "column",
+          "wrap": false,
+          "gap": 12,
+          "padding": 0,
+          "margin": 0,
+          "fontSize": 14,
+          "align": "stretch",
+          "overflow": "visible",
+          "note": "",
+          "text": "预览"
+        }
+      },
+      {
+        "id": "edit-save",
+        "type": "button",
+        "name": "保存笔记",
+        "parentId": "edit-actions",
+        "scene": "edit",
+        "props": {
+          "hidden": false,
+          "width": "auto",
+          "height": "auto",
+          "direction": "column",
+          "wrap": false,
+          "gap": 12,
+          "padding": 0,
+          "margin": 0,
+          "fontSize": 14,
+          "align": "stretch",
+          "overflow": "visible",
+          "note": "",
+          "text": "保存"
+        }
+      },
+      {
+        "id": "edit-source",
+        "type": "button",
+        "name": "打开共创",
+        "parentId": "edit-actions",
+        "scene": "edit",
+        "props": {
+          "hidden": false,
+          "width": "auto",
+          "height": "auto",
+          "direction": "column",
+          "wrap": false,
+          "gap": 12,
+          "padding": 0,
+          "margin": 0,
+          "fontSize": 14,
+          "align": "stretch",
+          "overflow": "visible",
+          "note": "",
+          "text": "AI 共创"
+        }
+      },
+      {
+        "id": "edit-editor",
+        "type": "content",
+        "name": "正文编辑",
+        "parentId": "edit-main",
+        "scene": "edit",
+        "props": {
+          "hidden": false,
+          "width": "fill",
+          "height": "fill",
+          "direction": "column",
+          "wrap": false,
+          "gap": 12,
+          "padding": 16,
+          "margin": 0,
+          "fontSize": 16,
+          "align": "stretch",
+          "overflow": "auto",
+          "note": "",
+          "role": "editor"
+        },
+        "mobile": {
+          "height": 500,
+          "padding": 10
+        }
+      },
+      {
+        "id": "edit-outline",
+        "type": "content",
+        "name": "页内目录",
+        "parentId": "scene-edit",
+        "scene": "edit",
+        "props": {
+          "hidden": true,
+          "width": 180,
+          "height": "auto",
+          "direction": "column",
+          "wrap": false,
+          "gap": 12,
+          "padding": 0,
+          "margin": 0,
+          "fontSize": 14,
+          "align": "stretch",
+          "overflow": "visible",
+          "note": "",
+          "role": "outline"
+        },
+        "mobile": {
+          "width": "fill",
+          "hidden": true
+        }
+      },
+      {
+        "id": "edit-coauthor",
+        "type": "content",
+        "name": "原生共创",
+        "parentId": "scene-edit",
+        "scene": "edit",
+        "props": {
+          "hidden": true,
+          "width": 310,
+          "height": "auto",
+          "direction": "column",
+          "wrap": false,
+          "gap": 12,
+          "padding": 0,
+          "margin": 0,
+          "fontSize": 14,
+          "align": "stretch",
+          "overflow": "visible",
+          "note": "",
+          "role": "chat"
+        },
+        "mobile": {
+          "width": "fill",
+          "height": 420,
+          "hidden": true
+        }
+      },
+      {
+        "id": "scene-topics",
+        "type": "container",
+        "name": "待整理场景",
+        "parentId": "scene-host",
+        "scene": "topics",
+        "props": {
+          "hidden": false,
+          "width": "fill",
+          "height": "fill",
+          "direction": "row",
+          "wrap": false,
+          "gap": 18,
+          "padding": 20,
+          "margin": 0,
+          "fontSize": 14,
+          "align": "stretch",
+          "overflow": "visible",
+          "note": ""
+        },
+        "mobile": {
+          "direction": "column",
+          "height": "auto",
+          "padding": 12,
+          "gap": 12
+        }
+      },
+      {
+        "id": "topics-sidebar",
+        "type": "container",
+        "name": "问题侧栏",
+        "parentId": "scene-topics",
+        "scene": "topics",
+        "props": {
+          "hidden": false,
+          "width": 220,
+          "height": "auto",
+          "direction": "column",
+          "wrap": false,
+          "gap": 12,
+          "padding": 0,
+          "margin": 0,
+          "fontSize": 14,
+          "align": "stretch",
+          "overflow": "visible",
+          "note": ""
+        },
+        "mobile": {
+          "width": "fill",
+          "height": "auto"
+        }
+      },
+      {
+        "id": "topics-heading",
+        "type": "text",
+        "name": "问题列表标题",
+        "parentId": "topics-sidebar",
+        "scene": "topics",
+        "props": {
+          "hidden": true,
+          "width": "auto",
+          "height": "auto",
+          "direction": "column",
+          "wrap": false,
+          "gap": 12,
+          "padding": 0,
+          "margin": 0,
+          "fontSize": 18,
+          "align": "stretch",
+          "overflow": "visible",
+          "note": "",
+          "text": "待整理的问题"
+        }
+      },
+      {
+        "id": "topic-new",
+        "type": "button",
+        "name": "新增问题",
+        "parentId": "topics-sidebar",
+        "scene": "topics",
+        "props": {
+          "hidden": false,
+          "width": "auto",
+          "height": "auto",
+          "direction": "column",
+          "wrap": false,
+          "gap": 12,
+          "padding": 0,
+          "margin": 0,
+          "fontSize": 14,
+          "align": "stretch",
+          "overflow": "visible",
+          "note": "",
+          "text": "新建问题"
+        }
+      },
+      {
+        "id": "topics-question-list",
+        "type": "content",
+        "name": "问题列表",
+        "parentId": "topics-sidebar",
+        "scene": "topics",
+        "props": {
+          "hidden": false,
+          "width": "auto",
+          "height": "fill",
+          "direction": "column",
+          "wrap": false,
+          "gap": 12,
+          "padding": 0,
+          "margin": 0,
+          "fontSize": 14,
+          "align": "stretch",
+          "overflow": "hidden",
+          "note": "",
+          "role": "questions"
+        },
+        "mobile": {
+          "height": 100
+        }
+      },
+      {
+        "id": "topics-main",
+        "type": "container",
+        "name": "问题工作区",
+        "parentId": "scene-topics",
+        "scene": "topics",
+        "props": {
+          "hidden": false,
+          "width": "fill",
+          "height": "fill",
+          "direction": "column",
+          "wrap": false,
+          "gap": 18,
+          "padding": 0,
+          "margin": 0,
+          "fontSize": 14,
+          "align": "stretch",
+          "overflow": "visible",
+          "note": ""
+        },
+        "mobile": {
+          "height": "auto"
+        }
+      },
+      {
+        "id": "topics-header",
+        "type": "container",
+        "name": "问题标题栏",
+        "parentId": "topics-main",
+        "scene": "topics",
+        "props": {
+          "hidden": false,
+          "width": "auto",
+          "height": "auto",
+          "direction": "row",
+          "wrap": false,
+          "gap": 12,
+          "padding": 0,
+          "margin": 0,
+          "fontSize": 14,
+          "align": "center",
+          "overflow": "visible",
+          "note": ""
+        },
+        "mobile": {
+          "direction": "column",
+          "align": "stretch"
+        }
+      },
+      {
+        "id": "topics-title",
+        "type": "text",
+        "name": "当前问题",
+        "parentId": "topics-header",
+        "scene": "topics",
+        "props": {
+          "hidden": false,
+          "width": "fill",
+          "height": "auto",
+          "direction": "column",
+          "wrap": false,
+          "gap": 12,
+          "padding": 0,
+          "margin": 0,
+          "fontSize": 23,
+          "align": "stretch",
+          "overflow": "visible",
+          "note": "",
+          "text": "怎样把这些材料联系起来？"
+        },
+        "mobile": {
+          "fontSize": 21
+        }
+      },
+      {
+        "id": "topics-actions",
+        "type": "container",
+        "name": "问题操作",
+        "parentId": "topics-header",
+        "scene": "topics",
+        "props": {
+          "hidden": false,
+          "width": "auto",
+          "height": "auto",
+          "direction": "row",
+          "wrap": false,
+          "gap": 12,
+          "padding": 0,
+          "margin": 0,
+          "fontSize": 14,
+          "align": "stretch",
+          "overflow": "visible",
+          "note": ""
+        }
+      },
+      {
+        "id": "topic-new-note",
+        "type": "button",
+        "name": "手工成稿",
+        "parentId": "topics-actions",
+        "scene": "topics",
+        "props": {
+          "hidden": false,
+          "width": "auto",
+          "height": "auto",
+          "direction": "column",
+          "wrap": false,
+          "gap": 12,
+          "padding": 0,
+          "margin": 0,
+          "fontSize": 14,
+          "align": "stretch",
+          "overflow": "visible",
+          "note": "",
+          "text": "新建正式笔记"
+        }
+      },
+      {
+        "id": "topics-body",
+        "type": "container",
+        "name": "来源与共创并排区",
+        "parentId": "topics-main",
+        "scene": "topics",
+        "props": {
+          "hidden": false,
+          "width": "fill",
+          "height": "fill",
+          "direction": "row",
+          "wrap": false,
+          "gap": 18,
+          "padding": 0,
+          "margin": 0,
+          "fontSize": 14,
+          "align": "stretch",
+          "overflow": "visible",
+          "note": ""
+        },
+        "mobile": {
+          "direction": "column",
+          "height": "auto"
+        }
+      },
+      {
+        "id": "topics-evidence",
+        "type": "container",
+        "name": "来源工作区",
+        "parentId": "topics-body",
+        "scene": "topics",
+        "props": {
+          "hidden": false,
+          "width": "fill",
+          "height": "fill",
+          "direction": "column",
+          "wrap": false,
+          "gap": 14,
+          "padding": 0,
+          "margin": 0,
+          "fontSize": 14,
+          "align": "stretch",
+          "overflow": "visible",
+          "note": ""
+        },
+        "mobile": {
+          "height": "auto"
+        }
+      },
+      {
+        "id": "topics-sources",
+        "type": "content",
+        "name": "已选来源",
+        "parentId": "topics-evidence",
+        "scene": "topics",
+        "props": {
+          "hidden": false,
+          "width": "auto",
+          "height": 180,
+          "direction": "column",
+          "wrap": false,
+          "gap": 12,
+          "padding": 0,
+          "margin": 0,
+          "fontSize": 14,
+          "align": "stretch",
+          "overflow": "auto",
+          "note": "",
+          "role": "sources"
+        },
+        "mobile": {
+          "height": 150
+        }
+      },
+      {
+        "id": "topics-reader",
+        "type": "content",
+        "name": "来源原文",
+        "parentId": "topics-evidence",
+        "scene": "topics",
+        "props": {
+          "hidden": false,
+          "width": "auto",
+          "height": "fill",
+          "direction": "column",
+          "wrap": false,
+          "gap": 12,
+          "padding": 0,
+          "margin": 0,
+          "fontSize": 15,
+          "align": "stretch",
+          "overflow": "auto",
+          "note": "",
+          "role": "source-reader"
+        },
+        "mobile": {
+          "height": 260
+        }
+      },
+      {
+        "id": "topics-chat",
+        "type": "content",
+        "name": "原生共创",
+        "parentId": "topics-body",
+        "scene": "topics",
+        "props": {
+          "hidden": false,
+          "width": 340,
+          "height": "fill",
+          "direction": "column",
+          "wrap": false,
+          "gap": 12,
+          "padding": 0,
+          "margin": 0,
+          "fontSize": 14,
+          "align": "stretch",
+          "overflow": "visible",
+          "note": "",
+          "role": "chat"
+        },
+        "mobile": {
+          "width": "fill",
+          "height": 440
+        }
+      }
+    ]
+  },
+  "ui": {
+    "scene": "library",
+    "device": "desktop",
+    "mode": "design",
+    "zoom": "fit",
+    "dark": false
+  },
+  "documentId": "fe2850e7-8fc5-4d3f-a43e-74dcd30b4c1a"
+}

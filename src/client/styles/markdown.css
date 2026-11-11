@@ -1,0 +1,215 @@
+/* Markdown behavior retained independently from workspace surfaces. */
+.dn-workspace .em-md-field {
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+}
+.dn-workspace .em-md-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 12px;
+  color: var(--nb-faint);
+  font: 11px/1.6 var(--nb-ui-font);
+}
+.dn-workspace .em-md-label {
+  letter-spacing: .01em;
+}
+.dn-workspace .em-md-modes {
+  display: flex;
+  flex-shrink: 0;
+  gap: 2px;
+  padding: 3px;
+  border: 0;
+  border-radius: var(--nb-control-radius);
+  background: var(--nb-field);
+}
+.dn-workspace .em-md-toggle {
+  min-height: 28px;
+  padding: 4px 9px;
+  font-size: 11px;
+  border-radius: 7px;
+}
+.dn-workspace .em-md-source[hidden] {
+  display: none !important;
+}
+.dn-workspace .em-markdown {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: normal;
+  color: var(--nb-ink);
+  font-size: calc(14px * var(--em-font-scale, 1));
+  line-height: 1.85;
+}
+.dn-workspace .em-markdown > :first-child {
+  margin-top: 0;
+}
+.dn-workspace .em-markdown > :last-child {
+  margin-bottom: 0;
+}
+.dn-workspace .em-markdown p {
+  margin: 0 0 .85em;
+}
+.dn-workspace .em-markdown :is(h1, h2, h3, h4, h5, h6) {
+  margin: 1.2em 0 .55em;
+  overflow-wrap: anywhere;
+  color: var(--nb-ink);
+  font-weight: 600;
+  line-height: 1.5;
+}
+.dn-workspace .em-markdown h1 {
+  font-size: 1.7em;
+  letter-spacing: -.035em;
+}
+.dn-workspace .em-markdown h2 {
+  font-size: 1.4em;
+  letter-spacing: -.025em;
+}
+.dn-workspace .em-markdown h3 {
+  font-size: 1.2em;
+}
+.dn-workspace .em-markdown :is(h4, h5, h6) {
+  font-size: 1.05em;
+}
+.dn-workspace .em-markdown strong {
+  color: var(--nb-ink);
+  font-weight: 650;
+}
+.dn-workspace .em-markdown :is(ul, ol) {
+  margin: .6em 0;
+  padding-left: 1.6em;
+}
+.dn-workspace .em-markdown li {
+  min-width: 0;
+  margin: .25em 0;
+}
+.dn-workspace .em-markdown li > p {
+  margin: .3em 0;
+}
+.dn-workspace .em-markdown blockquote {
+  margin: 1em 0;
+  padding: 0 0 0 1em;
+  border-left: 3px solid var(--nb-line);
+  color: var(--nb-muted);
+}
+.dn-workspace .em-markdown hr {
+  margin: 1.2em 0;
+  border: 0;
+  border-top: 1px solid var(--nb-line);
+}
+.dn-workspace .em-markdown a {
+  overflow-wrap: anywhere;
+  color: var(--nb-link);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.dn-workspace .em-markdown a:focus-visible {
+  outline: 2px solid var(--nb-focus);
+  outline-offset: 3px;
+}
+.dn-workspace .em-markdown img {
+  display: block;
+  max-width: 100%;
+  max-height: 420px;
+  height: auto;
+  margin: .7em 0;
+  border-radius: 6px;
+  object-fit: contain;
+}
+.dn-workspace .em-markdown :is(code, pre) {
+  font-family: "Cascadia Code", Consolas, ui-monospace, monospace;
+  font-size: .92em;
+}
+.dn-workspace .em-markdown :not(pre) > code {
+  padding: .12em .35em;
+  border-radius: 4px;
+  background: var(--nb-state);
+  color: var(--nb-ink);
+  white-space: pre-wrap;
+}
+.dn-workspace .em-markdown pre {
+  min-width: 0;
+  max-width: 100%;
+  margin: 1em 0;
+  padding: 13px 15px;
+  overflow: auto;
+  border: 1px solid var(--nb-line);
+  border-radius: 9px;
+  background: var(--nb-state);
+  white-space: pre;
+  line-height: 1.7;
+  tab-size: 4;
+}
+.dn-workspace .em-markdown pre code {
+  padding: 0;
+  background: none;
+  color: var(--nb-ink);
+  font-size: inherit;
+  white-space: pre;
+}
+.dn-workspace .em-markdown :is(.hljs-comment, .hljs-quote) {
+  color: var(--nb-faint);
+  font-style: italic;
+}
+.dn-workspace .em-markdown :is(.hljs-keyword, .hljs-selector-tag, .hljs-built_in, .hljs-literal) {
+  color: var(--nb-link);
+}
+.dn-workspace .em-markdown :is(.hljs-string, .hljs-title, .hljs-number, .hljs-attr) {
+  color: var(--nb-ink);
+}
+.dn-workspace .em-markdown table {
+  display: block;
+  width: max-content;
+  max-width: 100%;
+  margin: 1em 0;
+  overflow: auto;
+  border-collapse: collapse;
+  font-size: .95em;
+}
+.dn-workspace .em-markdown :is(th, td) {
+  min-width: 60px;
+  padding: 7px 10px;
+  border: 1px solid var(--nb-line);
+  text-align: left;
+}
+.dn-workspace .em-markdown th {
+  background: var(--nb-state);
+  color: var(--nb-ink);
+  font-weight: 600;
+}
+.dn-workspace .em-markdown li.task-list-item {
+  list-style: none;
+}
+.dn-workspace .em-markdown .contains-task-list {
+  padding-left: 1.4em;
+}
+.dn-workspace .em-markdown input.task-list-item-checkbox {
+  appearance: auto;
+  width: 14px;
+  min-height: 0;
+  height: 14px;
+  margin: 0 .5em 0 -1.3em;
+  padding: 0;
+  vertical-align: middle;
+  accent-color: var(--nb-primary);
+  cursor: pointer;
+}
+.dn-workspace .em-markdown input.task-list-item-checkbox:disabled {
+  opacity: .5;
+  cursor: wait;
+}
+.dn-workspace .em-markdown .katex-display {
+  display: block;
+  max-width: 100%;
+  margin: 1em 0;
+  padding: 6px 1px;
+  overflow: auto hidden;
+}
+.dn-workspace .em-markdown .katex {
+  font-size: 1.08em;
+}
+.dn-workspace .em-markdown .katex-error {
+  color: var(--nb-danger) !important;
+}

@@ -1,0 +1,326 @@
+/* Original-file attachments, upload feedback and clipboard fallback. */
+.dn-workspace .tm-attachments {
+  box-sizing: border-box;
+  min-width: 0;
+  margin-top: 26px;
+  padding: 18px;
+  border: 1px solid var(--nb-line);
+  border-radius: 14px;
+  background: var(--nb-panel);
+  box-shadow: var(--nb-panel-shadow);
+  color: var(--nb-ink);
+  font: 13px/1.7 var(--nb-ui-font);
+}
+.dn-workspace .tm-attachments :is(.att-header, .att-heading, .att-actions, .att-footer) {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.dn-workspace .tm-attachments .att-header {
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 10px 14px;
+}
+.dn-workspace .tm-attachments .att-heading > svg {
+  flex-shrink: 0;
+  color: var(--nb-muted);
+}
+.dn-workspace .tm-attachments .att-heading h3 {
+  margin: 0;
+  color: var(--nb-ink);
+  font-size: 13px;
+  font-weight: 600;
+}
+.dn-workspace .tm-attachments .att-count {
+  min-width: 20px;
+  padding: 0 6px;
+  border: 1px solid var(--nb-line);
+  border-radius: 6px;
+  background: var(--nb-state);
+  color: var(--nb-muted);
+  text-align: center;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.dn-workspace .tm-attachments .att-actions {
+  flex-wrap: wrap;
+  gap: 5px 7px;
+}
+.dn-workspace .tm-attachments .att-action {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-width: 0;
+  min-height: 30px;
+  margin: 0;
+  padding: 5px 8px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--nb-muted);
+  font: 500 11px/1.5 var(--nb-ui-font);
+  text-decoration: none;
+  text-align: center;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+.dn-workspace .tm-attachments .att-action > svg {
+  flex-shrink: 0;
+}
+.dn-workspace .tm-attachments .att-action:hover {
+  border-color: var(--nb-line);
+  background: var(--nb-state);
+  color: var(--nb-ink);
+  box-shadow: var(--nb-control-shadow);
+  text-decoration: none;
+}
+.dn-workspace .tm-attachments .att-action:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+}
+.dn-workspace .tm-attachments .att-add {
+  border-color: var(--nb-line);
+  background: var(--nb-field);
+  color: var(--nb-ink);
+  box-shadow: var(--nb-control-shadow);
+}
+.dn-workspace .tm-attachments .att-remove {
+  color: var(--nb-danger);
+}
+.dn-workspace .tm-attachments :is(.att-action, .att-thumb, .att-manual-copy textarea):focus-visible {
+  outline: 2px solid var(--nb-focus);
+  outline-offset: 3px;
+}
+.dn-workspace .tm-attachments .att-dropzone {
+  margin-top: 14px;
+  padding: 10px 12px;
+  border: 1px dashed var(--nb-line);
+  border-radius: 9px;
+  background: var(--nb-field);
+  color: var(--nb-muted);
+  font-size: 11px;
+}
+.dn-workspace .tm-attachments .att-dropzone.is-empty {
+  padding: 16px;
+}
+.dn-workspace .tm-attachments .att-dropzone p {
+  margin: 0;
+  color: var(--nb-ink);
+  font: inherit;
+}
+.dn-workspace .tm-attachments .att-dropzone span {
+  display: block;
+  margin-top: 3px;
+  font-size: 11px;
+}
+.dn-workspace .tm-attachments.is-dragging {
+  outline: 2px solid var(--nb-focus);
+  outline-offset: 2px;
+}
+.dn-workspace .tm-attachments.is-dragging .att-dropzone {
+  border-color: var(--nb-focus);
+  background: var(--nb-state);
+}
+.dn-workspace .tm-attachments :is(.att-hint, .att-empty) {
+  margin: 9px 0 0;
+  color: var(--nb-muted);
+  font-size: 11px;
+  line-height: 1.8;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+.dn-workspace .tm-attachments .att-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+  margin: 14px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.dn-workspace .tm-attachments .att-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--nb-line);
+  border-radius: 10px;
+  background: var(--nb-card);
+  box-shadow: var(--nb-control-shadow);
+}
+.dn-workspace .tm-attachments .att-thumb {
+  display: block;
+  flex: 0 0 64px;
+  width: 64px;
+  height: 64px;
+  overflow: hidden;
+  border: 1px solid var(--nb-line);
+  border-radius: 8px;
+  background: var(--nb-reading);
+}
+.dn-workspace .tm-attachments .att-thumb img {
+  display: block;
+  width: 64px;
+  max-width: 100%;
+  height: 64px;
+  object-fit: cover;
+}
+.dn-workspace .tm-attachments .att-file-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 32px;
+  width: 32px;
+  height: 38px;
+  border: 1px solid var(--nb-line);
+  border-radius: 8px;
+  background: var(--nb-field);
+  color: var(--nb-muted);
+}
+.dn-workspace .tm-attachments .att-row-main {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.dn-workspace .tm-attachments .att-name {
+  display: block;
+  max-width: 100%;
+  margin: 0;
+  color: var(--nb-ink);
+  font-size: 12px;
+  font-weight: 550;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+.dn-workspace .tm-attachments .att-meta {
+  display: block;
+  margin: 2px 0 5px;
+  color: var(--nb-faint);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.dn-workspace .tm-attachments .att-row-main > .att-actions {
+  margin-left: -8px;
+}
+.dn-workspace .tm-attachments :is(.att-confirm, .att-notice, .att-progress, .att-manual-copy) {
+  min-width: 0;
+  margin-top: 12px;
+  padding: 11px 12px;
+  border: 1px solid var(--nb-line);
+  border-radius: 10px;
+  background: var(--nb-card);
+  color: var(--nb-ink);
+  overflow-wrap: anywhere;
+}
+.dn-workspace .tm-attachments .att-confirm > p {
+  margin: 0 0 6px;
+  font-size: 12px;
+  line-height: 1.8;
+}
+.dn-workspace .tm-attachments .att-notice {
+  font-size: 12px;
+}
+.dn-workspace .tm-attachments .att-notice.is-error {
+  border-left: 2px solid var(--nb-danger);
+}
+.dn-workspace .tm-attachments .att-notice p {
+  margin: 0;
+}
+.dn-workspace .tm-attachments .att-detail {
+  margin-top: 6px;
+  color: var(--nb-muted);
+  white-space: pre-wrap;
+}
+.dn-workspace .tm-attachments .att-failures {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 9px 0;
+  padding-left: 18px;
+}
+.dn-workspace .tm-attachments .att-failures :is(strong, span) {
+  display: block;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+.dn-workspace .tm-attachments .att-failures span {
+  color: var(--nb-muted);
+}
+.dn-workspace .tm-attachments .att-progress {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.dn-workspace .tm-attachments .att-progress > div {
+  flex: 1;
+  min-width: 0;
+}
+.dn-workspace .tm-attachments .att-progress :is(span, strong) {
+  display: block;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+.dn-workspace .tm-attachments .att-progress span {
+  color: var(--nb-muted);
+}
+.dn-workspace .tm-attachments .att-progress > button {
+  flex-shrink: 0;
+}
+.dn-workspace .tm-attachments .att-footer {
+  flex-wrap: wrap;
+  justify-content: space-between;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--nb-line);
+  color: var(--nb-faint);
+  font-size: 11px;
+}
+.dn-workspace .tm-attachments .att-manual-copy label {
+  color: var(--nb-ink);
+  font-size: 12px;
+  font-weight: 550;
+}
+.dn-workspace .tm-attachments .att-manual-copy textarea {
+  box-sizing: border-box;
+  display: block;
+  width: 100%;
+  min-width: 0;
+  max-height: 180px;
+  margin-top: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--nb-line);
+  border-radius: 8px;
+  background: var(--nb-field);
+  color: var(--nb-ink);
+  font: 12px/1.7 ui-monospace, Consolas, monospace;
+  resize: vertical;
+}
+@container nb (max-width: 480px) {
+  .dn-workspace .tm-attachments {
+    padding: 13px;
+  }
+  .dn-workspace .tm-attachments .att-row {
+    gap: 9px;
+    padding: 10px;
+  }
+  .dn-workspace .tm-attachments .att-thumb {
+    flex-basis: 48px;
+    width: 48px;
+    height: 48px;
+  }
+  .dn-workspace .tm-attachments .att-thumb img {
+    width: 48px;
+    height: 48px;
+  }
+  .dn-workspace .tm-attachments .att-progress {
+    flex-wrap: wrap;
+  }
+}

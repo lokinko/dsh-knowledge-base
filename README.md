@@ -1,15 +1,19 @@
 # dsh-knowledge-base
 
-dsh-knowledge-base 是 DeepSeek Harness 中可独立安装的笔记插件。它提供 Markdown 笔记、附件、历史版本和 DSH 原生 AI 共写，资料保存在运行 DSH 的 Host 电脑上。
+dsh-knowledge-base 是 DeepSeek Harness 中可独立安装的个人知识库。它保存你关注的材料与思考，以问题连接笔记和讨论，借助 DSH 原生 Agent 共创，再由你手工沉淀成新的内容。支持 Markdown、附件和历史版本，资料保存在运行 DSH 的 Host 电脑上。
 
-产品暂定名为 **dsh-knowledge-base**，当前版本为 **0.1.0**，npm 包名为 `@lokinko/dsh-knowledge-base`。Git 发布标签与 npm 包使用相同版本号。
+产品暂定名为 **dsh-knowledge-base**，当前已发布版本为 **0.1.0**，npm 包名为 `@lokinko/dsh-knowledge-base`。下文功能描述对应仓库当前开发状态，尚未发布的变更见 [Unreleased 更新日志](CHANGELOG.md#unreleased)。Git 发布标签与 npm 包使用相同版本号。
 
 ## 功能
 
 ### 笔记与编辑
 
-- 文档、阅读、代码和日记分类，支持标签、置顶、搜索和网格／列表视图。
-- Markdown 编辑与预览，支持数学公式、代码高亮和 Markdown 任务列表。
+- 保留文档、阅读、代码和日记分类，可按需新增分类和子分类，拖动调整顺序与层级；选择父分类时包含子分类笔记。
+- 在“管理分类”中拖到行上沿/下沿可排序，拖到中央可移入，也可使用父分类选择框及上移/下移按钮。分类结构随资料库保存和迁移。
+- 支持标签、置顶、搜索和网格／列表视图。
+- CodeMirror 增量编辑、编辑／预览／分屏、Markdown 格式工具和行首 `/` 菜单，支持数学公式、代码高亮及任务列表。
+- Ctrl+P 快速打开、Ctrl+Shift+P 命令面板、Ctrl+F 文档查找替换，保留撤销／重做与混合换行原文。
+- 大文档预览使用本地 Worker 与可见区渲染；标题目录全量派生、支持折叠，文件目录懒加载并可拖动归类。
 - 正文原样保存，不设固定字符数上限；预览渲染不会改写原文。
 - 自动保存、本机草稿恢复、版本历史、快照、回收站与恢复。
 - 导入 Markdown 文件，或将单篇笔记导出为 Markdown。
@@ -32,11 +36,16 @@ PDF 附件当前提供打开和下载功能，不提供文本提取或 OCR。
 - 助手先识别当前会话绑定的笔记及其元信息，再按需检索、分块读取笔记。
 - 按你的要求，助手可通过编辑工具修改笔记；修改受版本冲突检查保护。
 - 笔记检索页只查询笔记，并可打开结果对应的原笔记。
+- 相关时，助手可回顾当前资料库内授权的旧讨论，再给出自己的思考；弱相关时直接继续话题。首版使用有范围限制的词法候选检索。
+- 「待整理」支持手工建立问题、跨笔记和讨论挑选原文来源、移除和排序，再按需打开 DSH 原生共创。
+- 整理时机和观点合并由你决定；正式内容通过空白笔记手工录入。详见[讨论与按问题整理规格](docs/spec/discussions-and-topics.md)。
 
 | 工具 | 用途 |
 | --- | --- |
 | `manage_notes`、`edit_note` | 管理笔记、历史版本与正文编辑 |
+| `manage_note_categories` | 新增、改名、移动分类与读取树形顺序 |
 | `search_notes` | 检索笔记并分块读取精确内容 |
+| `search_note_discussions` | 在绑定的知识库会话中查找相关来源、精确读取或查询当前手工问题 |
 | `manage_note_chat` | 查询或创建笔记与原生会话的绑定 |
 | `manage_note_storage` | 检查和切换笔记资料目录 |
 | `manage_note_attachments` | 管理本插件的笔记附件 |
@@ -154,6 +163,55 @@ npm run check:release
 ```
 
 构建生成 Host／Client 入口；测试覆盖单元、集成与 Markdown 渲染。`prepack` 会依次执行构建、测试和发布检查。安装发布包无需自行构建。
+
+### 源码组织
+
+```text
+src/
+  host/          # notes、categories、topics、discussions、search、storage、attachments、coauthor
+  client/        # notes、editor、navigation、categories、topics、controls、markdown 等模块
+                 # styles 和 labels 显式模块导入
+scripts/
+  build/         # Host / Client 构建、第三方样式与许可
+  lib/           # 构建与测试共用的依赖边界检查
+  build.mjs      # 统一构建入口
+  test.mjs       # 自动发现并运行 tests/**/*.test.mjs
+tests/
+  host/          # 后端业务与文件系统测试
+  client/        # 编辑协调、导航、渲染与宿主模块装配
+  integration/   # 生产入口与跨层验证
+  tooling/       # 模块边界、依赖方向、循环与闲置文件
+  performance/   # 手动性能基准
+  browser/       # Chromium 真实渲染、交互与截图
+  prototype/     # 离线布局原型的模型与迁移验证
+prototypes/      # 独立布局工坊与保留的 JSON 设计基线
+docs/spec/       # 架构、行为契约、兼容边界与验收
+```
+
+从 [开发入口](docs/development.md) 定位修改位置与验证命令，再读 [spec 索引](docs/spec/README.md) 了解行为契约。开发时修改对应模块，不直接维护根目录的预构建入口；中间产物位于被忽略的 `.build/`。前端使用宿主 React，模块通过显式 import/export 和组件工厂传递依赖，无需源码文本拼接。`npm run check` 统一执行构建、Node 测试、发布检查与重复构建检查；源码依赖边界、循环与闲置文件也有自动检查。
+
+提交 Git 时保留源码、测试、规格、锁文件、根目录预构建入口和第三方许可。依赖目录、临时构建、浏览器截图/报告、凭据与本地资料库由 `.gitignore` 排除。离线布局工坊的构建与使用见 [原型说明](prototypes/workbench/README.md) 和 [用户设计版说明](prototypes/workbench/ATOMIC-README.md)。
+
+附加验证命令：
+
+```sh
+npm run check:reproducible
+npm audit --omit=dev
+npm pack --dry-run --ignore-scripts
+npm run bench:client
+npm run bench:workspace
+```
+
+UI 保留参考 [Solid Glass](https://deeplethe.github.io/solid-glass/) 的中性烟灰配色及 [Looseleaf](https://kevintngo.github.io/looseleaf/#/components) 的分区导航，并参考 [Quiet.md](https://github.com/s1dashu/quiet-md) 优化可见区、增量编辑、命令与目录交互，减少大面板模糊和多余层级。实现采用 Web 的 CodeMirror、IndexedDB 和本地 Worker；不等同于移植原生 GPUI 或承诺其原生基准。详见[工作区性能规格](docs/spec/performance-and-workbench.md)与[界面设计规格](docs/spec/ui-design.md)。浏览器验收使用隔离数据和实际插件构建，无需启动替代服务器：
+
+```sh
+npx playwright install chromium
+npm run test:ui
+```
+
+Windows 可直接使用已安装的 Chrome，或通过 `DSH_TEST_CHROME` 指定路径。截图输出到 `.build/ui/`，浏览器测试依赖的 React 不进入插件发布包。
+
+CI 覆盖 Ubuntu／Windows 和 Node 22／24，另有 Chromium 浏览器验收。`bench:client` 测量编辑协调与内存缓存算法成本；`bench:workspace` 使用真实浏览器测量输入、预览和异步草稿持久化。浏览器草稿采用 IndexedDB 合并事务并保留旧缓存兼容，恢复与失败处理契约见 [编辑器 spec](docs/spec/editor-and-coauthor.md)。构建和检查不会发布 npm，也不会自动更新当前 DSH 安装。
 
 ## 许可证
 

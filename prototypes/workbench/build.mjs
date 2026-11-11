@@ -1,0 +1,12 @@
+import {build} from 'esbuild';
+import {readFile,mkdir,writeFile} from 'node:fs/promises';
+import {fileURLToPath} from 'node:url';
+import path from 'node:path';
+const root=fileURLToPath(new URL('../../',import.meta.url));
+const result=await build({absWorkingDir:root,entryPoints:['prototypes/workbench/app.js'],bundle:true,write:false,metafile:true,format:'iife',platform:'browser',target:'chrome110',legalComments:'none'});
+if(Object.keys(result.metafile.inputs).some(x=>x.startsWith('src/')))throw new Error('Prototype must not depend on production modules');
+const css=await readFile(new URL('./styles.css',import.meta.url),'utf8');
+const script=result.outputFiles[0].text.replace(/<\/script/gi,'<\\/script');
+const html=`<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"><title>个人知识库 · 可调整布局原型</title><style>${css}</style></head><body><div id="app"></div><script type="application/json" id="prototype-state">null</script><script>${script}</script></body></html>`;
+const out=path.join(root,'.build/prototypes');await mkdir(out,{recursive:true});await writeFile(path.join(out,'workbench.html'),html,'utf8');
+console.log(`Offline prototype: ${path.join(out,'workbench.html')} (${Buffer.byteLength(html)} bytes). Production bundles unchanged.`);

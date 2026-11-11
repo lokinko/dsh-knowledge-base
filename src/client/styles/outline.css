@@ -1,0 +1,69 @@
+.dn-workspace .nb-editor.has-outline .nb-document-outline {
+ display: flex;
+ flex-direction: column;
+ overflow: hidden;
+}
+.dn-workspace .nb-document-outline > header {
+ display: flex;
+ align-items: center;
+ justify-content: space-between;
+ flex: 0 0 auto;
+ gap: 8px;
+ margin-bottom: 10px;
+}
+.dn-workspace .nb-document-outline > header h3 { margin: 0; }
+.dn-workspace .nb-outline-actions { display: flex; gap: 4px; }
+.dn-workspace .nb-outline-actions button,
+.dn-workspace .nb-outline-fold {
+ display: inline-flex;
+ align-items: center;
+ justify-content: center;
+ padding: 0;
+ border: 0;
+ border-radius: 4px;
+ background: transparent;
+ color: var(--nb-muted);
+ font: inherit;
+ cursor: pointer;
+}
+.dn-workspace .nb-outline-actions button { width: 24px; height: 24px; }
+.dn-workspace .nb-document-outline nav.nb-outline-viewport {
+ display: block;
+ flex: 1 1 auto;
+ min-height: 0;
+ overflow-y: auto;
+ overflow-x: hidden;
+ overscroll-behavior: contain;
+ scrollbar-width: thin;
+ gap: 0;
+}
+.dn-workspace .nb-outline-row {
+ display: flex;
+ align-items: center;
+ box-sizing: border-box;
+ min-width: 0;
+ padding-inline-start: calc(min(var(--nb-outline-depth, 0), 5) * 10px);
+}
+.dn-workspace .nb-outline-fold,
+.dn-workspace .nb-outline-fold-space { flex: 0 0 18px; width: 18px; height: 26px; }
+.dn-workspace .nb-outline-row .nb-outline-link {
+ display: block;
+ flex: 1 1 auto;
+ width: auto;
+ min-width: 0;
+ height: 30px;
+ padding: 4px 5px;
+ white-space: nowrap;
+ overflow: hidden;
+ text-overflow: ellipsis;
+ overflow-wrap: normal;
+}
+.dn-workspace .nb-outline-actions button:hover,
+.dn-workspace .nb-outline-fold:hover { background: var(--nb-state); color: var(--nb-ink); }
+.dn-workspace .nb-outline-actions button:focus-visible,
+.dn-workspace .nb-outline-fold:focus-visible,
+.dn-workspace .nb-outline-link:focus-visible { outline: 2px solid var(--nb-accent, currentColor); outline-offset: -2px; }
+.dn-workspace .nb-outline-actions button:disabled,
+.dn-workspace .nb-outline-fold:disabled,
+.dn-workspace .nb-outline-link:disabled { cursor: default; opacity: .55; }
+.dn-workspace .nb-outline-spacer { flex: none; pointer-events: none; }

@@ -6,9 +6,11 @@ permissions:
   contents: read
 jobs:
   verify:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
+        os: [ubuntu-latest, windows-latest]
         node: [22, 24]
     steps:
       - uses: actions/checkout@v4
@@ -17,7 +19,24 @@ jobs:
           node-version: ${{ matrix.node }}
           cache: npm
       - run: npm ci --ignore-scripts
-      - run: npm run build
-      - run: npm test
-      - run: npm run check:release
+      - run: npm run check
+      - run: npm audit --omit=dev
       - run: npm pack --dry-run --ignore-scripts
+  browser:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:ui
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: notebook-ui-verification
+          path: |
+            .build/ui/
+            .build/browser-results/

@@ -1,17 +1,30 @@
+# Dependencies and generated artifacts
 node_modules/
-**/node_modules/
-*.tgz
-coverage/
+.build/
 .release/
+coverage/
+*.tgz
+*.log
+playwright-report/
+test-results/
+
+# Local credentials and private library data
 .npmrc
 .env
 .env.*
 !.env.example
-*.log
+*.key
+*.pem
+*.p12
+*.pfx
+dsh-notebook/
+
+# Editor and operating system files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
 .DS_Store
 Thumbs.db
-bootstrap-scoped.css
-markdown-build/build-meta.json
-markdown-build/host-build-meta.json
-index.unbounded.js
-client.markdown.js
+Desktop.ini

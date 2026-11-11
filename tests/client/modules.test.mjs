@@ -1,0 +1,35 @@
+import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+import {fileURLToPath} from 'node:url';
+import vm from 'node:vm';
+import {build} from 'esbuild';
+
+const root=fileURLToPath(new URL('../../',import.meta.url));
+const bundle=await build({absWorkingDir:root,entryPoints:['src/client/index.js'],bundle:true,write:false,metafile:true,format:'iife',platform:'browser',loader:{'.css':'text'},define:{__TODO_MODULE_ID__:JSON.stringify('client-module-test'),__TODO_KATEX_CSS__:JSON.stringify(''),__TODO_BOOTSTRAP_CSS__:JSON.stringify('')}});
+const inputs=Object.keys(bundle.metafile.inputs);
+assert(!inputs.some(input=>/node_modules\/(?:react|react-dom)\//.test(input)));
+assert(inputs.filter(input=>!input.includes('node_modules')).every(input=>input.startsWith('src/client/')));
+const definitions=[],registrations=[],catalogs=[],disposers=[],disposedSlots=[],disposedLocales=[],listeners=new Map();
+const react={createElement:(type,props,...children)=>({type,props,children})};
+const window={__ModuleLoader__:{load:definition=>definitions.push(definition)},addEventListener(name,handler){assert(!listeners.has(name));listeners.set(name,handler);},removeEventListener(name,handler){assert.equal(listeners.get(name),handler);listeners.delete(name);}};
+vm.runInNewContext(bundle.outputFiles[0].text,{window,URL,Set,Map,AbortController,setTimeout,clearTimeout});
+assert.equal(definitions.length,1);
+assert.equal(definitions[0].id,'client-module-test');
+const requested=[];
+const plugin=definitions[0].factory(name=>{requested.push(name);assert.equal(name,'react');return react;});
+assert.deepEqual(requested,['react']);
+plugin.apply({effect:fn=>{const dispose=fn();if(typeof dispose==='function')disposers.push(dispose);},locale:{register:(namespace,language,dict)=>{catalogs.push({namespace,language,dict});return()=>disposedLocales.push(language);},bind:()=>key=>key,subscribe(){},getSnapshot:()=>({active:'en'})},slots:{inject:(name,fn)=>{const dispose=fn();if(typeof dispose==='function')disposers.push(dispose);},register:(slot,render)=>{registrations.push({slot,render});return()=>disposedSlots.push(slot.name);}},layout:{},sessions:{}});
+assert.deepEqual(registrations.map(item=>item.slot.name),['sidebar.panellist','main','dsh-note.coauthor']);
+assert.equal(catalogs.length,2);
+for(const catalog of catalogs){assert.equal(catalog.namespace,'dshNote');assert(!('contextTasks' in catalog.dict));assert(!('attSaveTask' in catalog.dict));assert(catalog.dict.nbContent);}
+assert.equal(catalogs.find(item=>item.language==='en').dict.nbWorkspaceTitle,'Notes');
+assert.deepEqual([...listeners.keys()].sort(),['beforeunload','storage']);
+assert.deepEqual(Array.from(plugin.inject),['slots','locale','layout','sessions']);
+assert.equal(registrations[1].slot.children['dsh-note.coauthor'].scope,'session');
+for(const dispose of disposers.reverse())await dispose();
+assert.equal(listeners.size,0);
+assert.deepEqual(disposedSlots,['dsh-note.coauthor','main','sidebar.panellist']);
+assert.deepEqual(disposedLocales,['en','zh']);
+const entry=await readFile(new URL('../../src/client/index.js',import.meta.url),'utf8');
+assert(!entry.includes('@generated-'));
+console.log('PASS: explicit client graph, host React factory, registration lifecycle and labels');
