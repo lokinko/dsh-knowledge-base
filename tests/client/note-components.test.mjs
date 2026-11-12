@@ -48,7 +48,7 @@ test('workspace creates stable editor and history component types during factory
  const app=harness(),deps=dependencies(app),tree={id:'categories',revision:0,items:[]};
  Object.assign(deps,{
   useCategories:()=>({tree,flattened:[],categoryLabel:value=>value}),
-  CategoryNavigation(){},CategoryManager(){},DirectoryPanel(){},CommandMenu(){},ShortcutHelp(){},NoteStorageSettings(){},NotebookHero(){},NoteLibraryCard(){},CoauthorPanel(){},localCalendar:()=>'',
+  CategoryNavigation(){},CategoryManager(){},DirectoryPanel(){},CommandMenu(){},ShortcutHelp(){},NoteSettings(){},NoteLibraryCard(){},CoauthorPanel(){},localCalendar:()=>'',
   notesRequest:async input=>{assert.equal(input.action,'get');return {note};}
  });
  const exported=createNotesUI(deps);

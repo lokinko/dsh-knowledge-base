@@ -101,7 +101,7 @@ function panelRunner(extra={}){
  let currentTree=tree(),refreshes=0;const moves=[],opens=[],loads=[],noteMoves=[];
  function categories(){return {tree:currentTree,ready:true,loading:false,busy:false,error:null,flattened:currentTree.items.map(item=>({...item,label:item.name})),categoryLabel:id=>currentTree.items.find(item=>item.id===id)?.name||id,
   async refresh(){refreshes++;},async mutate(action,input){moves.push({action,input});if(extra.mutate)return extra.mutate(action,input);currentTree={...currentTree,revision:currentTree.revision+1};return currentTree;}};}
- currentProps={categories:categories(),activeCategory:null,activeNoteId:null,onOpenNote:value=>opens.push(value),onSelectCategory(){},onCreateNote(){},onManage(){},loadNotes:async(id,page)=>{loads.push([id,page]);return {notes:[note('file-'+id,id)],total:1};},onMoveNote:async(value,target)=>{noteMoves.push([value,target]);return {...value,category:target,revision:value.revision+1};},...extra.props};
+ currentProps={categories:categories(),activeCategory:null,activeNoteId:null,onOpenNote:value=>opens.push(value),onSelectCategory(){},onCreateNote(){},loadNotes:async(id,page)=>{loads.push([id,page]);return {notes:[note('file-'+id,id)],total:1};},onMoveNote:async(value,target)=>{noteMoves.push([value,target]);return {...value,category:target,revision:value.revision+1};},...extra.props};
  const render=()=>{cursor=0;dirty=false;currentProps={...currentProps,categories:categories()};output=DirectoryPanel(currentProps);for(const effect of effects.splice(0))effect();return output;};
  const all=(node=output)=>typeof node==='object'?[node,...node.children.flatMap(all)]:[];
  const find=predicate=>all().find(predicate);
@@ -166,7 +166,7 @@ test('file drop delegates stable id/revision to parent callback and never mutate
 test('root drop preserves inverse position, while failed category CAS creates no undo record',async()=>{
  const root=panelRunner();await root.settle();
  childClass(folderRow(root,'b'),'nb-directory-drag').props.onDragStart(dragEvent());
- await root.byClass('nb-directory-root-drop').props.onDrop(dragEvent());root.render();
+ await root.byClass('nb-directory-viewport').props.onDrop(dragEvent());root.render();
  assert.deepEqual(root.moves[0],{action:'move',input:{id:'b',parentId:null,beforeId:null}});root.unmount();
  const failed=panelRunner({mutate:async()=>null});await failed.settle();
  childClass(folderRow(failed,'a'),'nb-directory-drag').props.onDragStart(dragEvent());

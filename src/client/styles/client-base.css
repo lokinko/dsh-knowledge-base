@@ -145,7 +145,7 @@
   overflow: hidden;
 }
 /* Controls: quiet by default. Fill and depth appear only where they carry meaning. */
-.dn-workspace :is(.em-icon, .em-btn, .nb-workspace-tab, .nb-nav-item, .nb-new, .em-md-toggle, .nb-mobile-back, .btn):not(.nb-native-conversation *) {
+.dn-workspace :is(.em-icon, .em-btn, .nb-workspace-tab, .nb-nav-item, .nb-new, .em-md-toggle, .nb-back-library, .btn):not(.nb-native-conversation *) {
   box-sizing: border-box;
   display: inline-flex;
   align-items: center;
@@ -163,7 +163,7 @@
   cursor: pointer;
   transition: background-color 140ms ease, color 140ms ease, box-shadow 140ms ease;
 }
-.dn-workspace :is(.em-icon, .nb-nav-item, .nb-workspace-tab, .em-md-toggle, .nb-mobile-back):not(.nb-native-conversation *) {
+.dn-workspace :is(.em-icon, .nb-nav-item, .nb-workspace-tab, .em-md-toggle, .nb-back-library):not(.nb-native-conversation *) {
   background: transparent;
 }
 .dn-workspace .em-icon:not(.nb-native-conversation *) {
@@ -177,7 +177,7 @@
 .dn-workspace .em-icon:not(.nb-native-conversation *) > svg {
   flex-shrink: 0;
 }
-.dn-workspace :is(.em-icon, .em-btn, .nb-workspace-tab, .nb-nav-item, .em-md-toggle, .nb-mobile-back, .btn):not(.nb-native-conversation *):is(:hover, [aria-pressed="true"], .is-active) {
+.dn-workspace :is(.em-icon, .em-btn, .nb-workspace-tab, .nb-nav-item, .em-md-toggle, .nb-back-library, .btn):not(.nb-native-conversation *):is(:hover, [aria-pressed="true"], .is-active) {
   border-color: transparent;
   background: var(--nb-state);
   color: var(--nb-ink);
@@ -197,7 +197,7 @@
   color: var(--nb-on-primary);
   filter: brightness(1.15);
 }
-.dn-workspace :is(.em-icon, .em-btn, .nb-workspace-tab, .nb-nav-item, .nb-new, .em-md-toggle, .nb-mobile-back, .btn):not(.nb-native-conversation *):disabled {
+.dn-workspace :is(.em-icon, .em-btn, .nb-workspace-tab, .nb-nav-item, .nb-new, .em-md-toggle, .nb-back-library, .btn):not(.nb-native-conversation *):disabled {
   opacity: .42;
   cursor: not-allowed;
   filter: none;
@@ -229,7 +229,7 @@
   color: var(--nb-faint);
   opacity: 1;
 }
-.dn-workspace :is(.em-icon, .em-btn, .nb-workspace button, .nb-workspace input, .nb-workspace select, .nb-workspace textarea, .nb-workspace-tab, .em-md-toggle, .em-font-select, .em-font-range, .nb-context-page button, .nb-context-page input, .nb-context-page select, .nb-coauthor-controls button, .nb-coauthor-empty button, .nb-storage-dialog button, .nb-storage-dialog input, .nb-history-dialog button):not(.nb-native-conversation *):focus-visible {
+.dn-workspace :is(.em-icon, .em-btn, .nb-workspace button, .nb-workspace input, .nb-workspace select, .nb-workspace textarea, .nb-workspace-tab, .em-md-toggle, .em-font-select, .em-font-range, .nb-context-page button, .nb-context-page input, .nb-context-page select, .nb-coauthor-controls button, .nb-coauthor-empty button, .nb-settings-dialog button, .nb-settings-dialog input, .nb-settings-dialog select, .nb-history-dialog button):not(.nb-native-conversation *):focus-visible {
   outline: 2px solid var(--nb-focus);
   outline-offset: 2px;
 }
@@ -285,7 +285,7 @@
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .dn-workspace :is(.em-icon, .em-btn, .nb-workspace-tab, .nb-nav-item, .nb-new, .em-md-toggle, .nb-mobile-back, .nb-note-row, .btn):not(.nb-native-conversation *) {
+  .dn-workspace :is(.em-icon, .em-btn, .nb-workspace-tab, .nb-nav-item, .nb-new, .em-md-toggle, .nb-back-library, .nb-note-row, .btn):not(.nb-native-conversation *) {
     transition: none;
     animation: none;
     scroll-behavior: auto;
@@ -326,7 +326,7 @@
     --nb-popover-shadow: none;
     --nb-control-shadow: none;
   }
-  .dn-workspace :is(.nb-nav-item.is-active, .nb-workspace-tab[aria-pressed="true"], .em-md-toggle[aria-pressed="true"], .nb-layout-switch button[aria-pressed="true"], .nb-filter-chip[aria-pressed="true"], .nb-collection-link[aria-current="true"], .nb-collection-link[aria-current="location"], .nb-outline-link[aria-current="true"], .nb-outline-link[aria-current="location"], .nb-note-row.is-active, .nb-context-result.is-active, .nb-version.is-active) {
+  .dn-workspace :is(.nb-nav-item.is-active, .nb-workspace-tab[aria-pressed="true"], .em-md-toggle[aria-pressed="true"], .nb-layout-switch button[aria-pressed="true"], .nb-outline-link[aria-current="true"], .nb-outline-link[aria-current="location"], .nb-note-row.is-active, .nb-context-result.is-active, .nb-version.is-active) {
     outline: 1px solid Highlight;
     outline-offset: -2px;
   }

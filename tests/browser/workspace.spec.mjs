@@ -196,13 +196,16 @@ for (const theme of ['dark', 'light']) {
       await page.keyboard.press('Escape');
       await expect(page.locator('.nb-history-dialog')).toHaveCount(0);
       await page.getByRole('button', {name: '返回列表', exact: true}).click();
-      await page.locator('.nb-category-foot').getByRole('button', {name: '笔记存储位置', exact: true}).click();
-      await expect(page.locator('.nb-storage-dialog')).toBeVisible();
+      await page.locator('.nb-category-foot').getByRole('button', {name: '设置', exact: true}).click();
+      await expect(page.locator('.nb-settings-dialog')).toBeVisible();
+      await expect(page.locator('.nb-settings-dialog .em-font-select')).toBeVisible();
+      await capture(page, `settings-${theme}`);
+      await page.locator('.nb-settings-nav').getByRole('button', {name: '笔记存储位置', exact: true}).click();
       await expect(page.locator('.nb-storage-path')).toBeEnabled();
-      expect(await page.locator('.nb-storage-dialog').evaluate(dialog => dialog.offsetHeight - dialog.querySelector('form').offsetHeight)).toBeLessThanOrEqual(4);
+      expect(await page.locator('.nb-settings-dialog').evaluate(dialog => dialog.scrollWidth <= dialog.clientWidth + 1)).toBe(true);
       await capture(page, `storage-${theme}`);
       await page.keyboard.press('Escape');
-      await expect(page.locator('.nb-storage-dialog')).toHaveCount(0);
+      await expect(page.locator('.nb-settings-dialog')).toHaveCount(0);
       expect(errors).toEqual([]);
     } finally { await page.evaluate(() => window.__disposeFixture?.()).catch(() => {}); await host.close(); }
   });
@@ -212,15 +215,16 @@ test('mobile: navigation, note editing, coauthor switching and native isolation'
   const {host, errors} = await openWorkspace(page, {width: 390, height: 844});
   try {
     await assertContained(page);
-    await page.locator('.nb-list-actions').getByRole('button', {name: '笔记存储位置', exact: true}).click();
-    await expect(page.locator('.nb-storage-dialog')).toBeVisible();
+    await page.locator('.nb-list-actions').getByRole('button', {name: '设置', exact: true}).click();
+    await expect(page.locator('.nb-settings-dialog')).toBeVisible();
+    await page.locator('.nb-settings-nav').getByRole('button', {name: '笔记存储位置', exact: true}).click();
     await expect(page.locator('.nb-storage-path')).toBeEnabled();
     await page.keyboard.press('Escape');
-    await expect(page.locator('.nb-storage-dialog')).toHaveCount(0);
+    await expect(page.locator('.nb-settings-dialog')).toHaveCount(0);
     await capture(page, 'mobile-library');
     await page.locator('.nb-note-row').filter({hasText: '让想法慢慢成形'}).click();
     await expect(page.locator('.nb-title-input')).toBeVisible();
-    await expect(page.locator('.nb-mobile-back')).toBeVisible();
+    await expect(page.locator('.nb-editor-head').getByRole('button', {name: '目录', exact: true})).toBeVisible();
     await assertContained(page);
     await capture(page, 'mobile-editor');
     await page.getByRole('button', {name: '进入专注模式', exact: true}).click();
@@ -247,6 +251,7 @@ test('mobile: navigation, note editing, coauthor switching and native isolation'
     await expect(native).toHaveValue('保留这段会话草稿');
     expect(await native.evaluate(element => window.__retainedNativeInput === element)).toBe(true);
     await page.getByRole('button', {name: '收起共创', exact: true}).click();
+    await page.locator('.nb-editor-head').getByRole('button', {name: '目录', exact: true}).click();
     await page.getByRole('button', {name: '返回列表', exact: true}).click();
     await expect(page.locator('.nb-note-row')).toHaveCount(6);
     expect(errors).toEqual([]);
@@ -264,15 +269,18 @@ test('new note, Markdown editing and typography keep working', async ({page}) =>
     await expect.poll(async () => (await host.tool('manage_notes', {action: 'list', query: '新写下的一页'})).total).toBe(1);
     const saved = (await host.tool('manage_notes', {action: 'list', query: '新写下的一页'})).notes[0];
     await expect.poll(async () => (await host.tool('manage_notes', {action: 'get', id: saved.id})).note.content).toBe('# 新的一页\n\n保留这段想法。');
-    await page.getByRole('button', {name: '字体设置', exact: true}).click();
-    await expect(page.locator('.em-font-panel')).toBeVisible();
-    await page.locator('.em-font-select').selectOption('serif');
-    await page.locator('.em-font-panel').getByRole('button', {name: '保存', exact: true}).click();
-    expect(await page.evaluate(() => JSON.parse(localStorage.getItem('dsh-note.appearance.v1')).fontFamily)).toBe('serif');
-    await expect(sourceContent(page)).toHaveCSS('font-family', /Noto Serif SC/);
-    await expect(page.locator('.nb-title-input')).toHaveCSS('font-family', /Noto Serif SC/);
     await page.getByRole('button', {name: '返回列表', exact: true}).click();
     await expect(page.locator('.nb-note-row')).toHaveCount(7);
+    await page.locator('.nb-category-foot').getByRole('button', {name: '设置', exact: true}).click();
+    await page.locator('.nb-settings-dialog .em-font-select').selectOption('serif');
+    expect(await page.evaluate(() => JSON.parse(localStorage.getItem('dsh-note.appearance.v1')).fontFamily)).toBe('serif');
+    await page.locator('.nb-settings-segment').getByRole('button', {name: '列表视图'}).click();
+    await expect(page.locator('.nb-workspace')).toHaveClass(/layout-list/);
+    await page.keyboard.press('Escape');
+    await expect(page.locator('.nb-settings-dialog')).toHaveCount(0);
+    await page.locator('.nb-note-row').filter({hasText: '新写下的一页'}).click();
+    await expect(sourceContent(page)).toHaveCSS('font-family', /Noto Serif SC/);
+    await expect(page.locator('.nb-title-input')).toHaveCSS('font-family', /Noto Serif SC/);
     expect(errors).toEqual([]);
   } finally { await page.evaluate(() => window.__disposeFixture?.()).catch(() => {}); await host.close(); }
 });
@@ -308,19 +316,16 @@ test('search, source navigation and binary attachment remain functional', async 
   } finally { await page.evaluate(() => window.__disposeFixture?.()).catch(() => {}); await host.close(); }
 });
 
-test('collection sections, local index and quick filters preserve page records', async ({page}) => {
+test('collection sections and category navigation preserve page records', async ({page}) => {
   const {host, errors} = await openWorkspace(page);
   try {
     await expect(page.locator('[data-section=pinned] .nb-note-row')).toHaveCount(1);
     await expect(page.locator('[data-section=recent] .nb-note-row')).toHaveCount(5);
-    await expect(page.locator('.nb-collection-index')).toBeVisible();
-    await page.locator('.nb-collection-index').getByRole('button', {name: /最近记录/}).click();
-    expect(await page.locator('.nb-note-list').evaluate(element => element.scrollTop)).toBeGreaterThan(0);
     const width = await page.locator('.nb-note-row').first().evaluate(element => element.getBoundingClientRect().width);
     expect(width).toBeGreaterThanOrEqual(300);
-    await page.locator('.nb-filter-strip').getByRole('button', {name: /^阅读笔记/}).click();
+    await page.locator('.nb-categories .nb-cat-nav-button').filter({hasText: '阅读笔记'}).click();
     await expect(page.locator('.nb-note-row')).toHaveCount(2);
-    await page.locator('.nb-filter-strip').getByRole('button', {name: /^全部笔记/}).click();
+    await page.locator('.nb-categories').getByRole('button', {name: '全部笔记', exact: true}).click();
     await expect(page.locator('.nb-note-row')).toHaveCount(6);
     await assertContained(page);
     expect(errors).toEqual([]);
@@ -376,25 +381,19 @@ test('normal host window gives actual note rows and document the available width
     await expect(page.locator('.nb-title-input')).toBeVisible();
     await expect(page.locator('.nb-categories')).toBeHidden();
     await expect(page.locator('.nb-document-outline')).toBeHidden();
-    await expect(page.locator('.nb-editor-title')).toHaveText('让想法慢慢成形');
+    await expect(page.locator('.nb-title-input')).toHaveValue('让想法慢慢成形');
+    await expect(page.locator('.nb-directory-panel')).toBeVisible();
     await capture(page, 'normal-host-window');
     const geometry = await page.evaluate(() => {
       const rect = selector => document.querySelector(selector).getBoundingClientRect();
-      const list = rect('.nb-list-panel'), row = rect('.nb-note-row'), stage = rect('.nb-document-stage'), documentBox = rect('.nb-document');
-      return {list: list.width, row: row.width, stage: stage.width, editor: rect('.nb-editor').width, document: documentBox.width, inset: documentBox.left - stage.left};
+      const list = rect('.nb-list-panel'), stage = rect('.nb-document-stage'), documentBox = rect('.nb-document');
+      return {list: list.width, stage: stage.width, editor: rect('.nb-editor').width, document: documentBox.width, inset: documentBox.left - stage.left};
     });
     console.log('Normal host geometry', geometry);
-    expect(geometry.row).toBeGreaterThan(240);
+    expect(geometry.list).toBeGreaterThan(240);
     expect(geometry.document / geometry.stage).toBeGreaterThan(.9);
     expect(geometry.inset).toBeLessThan(8);
     expect(geometry.document / geometry.editor).toBeGreaterThan(.9);
-    const category = page.locator('.nb-mobile-category');
-    await expect(category).toBeVisible();
-    await category.selectOption('reading');
-    await expect(page.locator('.nb-note-row')).toHaveCount(2);
-    await expect(page.locator('.nb-title-input')).toHaveValue('让想法慢慢成形');
-    await category.selectOption('all');
-    await expect(page.locator('.nb-note-row')).toHaveCount(6);
     await page.getByRole('button', {name: '显示文档目录', exact: true}).click();
     await expect(page.locator('.nb-document-outline')).toBeVisible();
     await capture(page, 'normal-host-outline');
@@ -424,11 +423,10 @@ test('custom parent and child categories classify notes, rename safely and survi
     await capture(page, 'categories-desktop');
     await page.keyboard.press('Escape');
     await expect(dialog).toHaveCount(0);
-    await page.locator('.nb-note-row').filter({hasText: '让想法慢慢成形'}).click();
     const original = (await host.tool('manage_notes', {action: 'get', id: host.notes[0].id})).note;
-    await page.locator('.nb-note-category').selectOption(child.id);
-    await expect.poll(async () => (await host.tool('manage_notes', {action: 'get', id: host.notes[0].id})).note.category).toBe(child.id);
+    await host.tool('manage_notes', {action: 'update', id: host.notes[0].id, revision: original.revision, category: child.id});
     const assigned = (await host.tool('manage_notes', {action: 'get', id: host.notes[0].id})).note;
+    expect(assigned.category).toBe(child.id);
     expect(assigned.content).toBe(original.content);
     dialog = await categoryManager(page);
     await dialog.locator('.nb-cat-select').filter({hasText: /^论文$/}).click();
@@ -436,11 +434,10 @@ test('custom parent and child categories classify notes, rename safely and survi
     await dialog.locator('form').filter({has: dialog.page().getByRole('textbox', {name: '重命名', exact: true})}).getByRole('button', {name: '保存', exact: true}).click();
     await expect(dialog.locator('.nb-cat-select').filter({hasText: /^论文阅读$/})).toBeVisible();
     await page.keyboard.press('Escape');
-    await expect(page.locator('.nb-editor-category')).toHaveText('论文阅读');
+    await expect(page.locator('.nb-note-row').filter({hasText: '让想法慢慢成形'})).toContainText('论文阅读');
     expect((await host.tool('manage_notes', {action: 'get', id: host.notes[0].id})).note.revision).toBe(assigned.revision);
-    await page.locator('.nb-mobile-category').selectOption(parent.id);
+    await page.locator('.nb-sidebar-nav .nb-cat-nav-button').filter({hasText: /^研究/}).click();
     await expect(page.locator('.nb-note-row')).toHaveCount(1);
-    await expect(page.locator('.nb-title-input')).toHaveValue('让想法慢慢成形');
     await expect(page.locator('.nb-list-heading')).toContainText('研究');
     await page.evaluate(() => window.__disposeFixture?.());
     await page.reload();
@@ -453,11 +450,12 @@ test('custom parent and child categories classify notes, rename safely and survi
     const longName = '深度研究'.repeat(18);
     await addCategory(dialog, longName);
     await page.keyboard.press('Escape');
-    await page.locator('.nb-filter-chip').filter({hasText: longName}).click();
+    await page.locator('.nb-categories .nb-cat-nav-button').filter({hasText: longName}).click();
     await expect(page.locator('.nb-note-row')).toHaveCount(0);
     await page.locator('.nb-list-actions').getByRole('button', {name: '新建笔记', exact: true}).click();
-    await expect(page.locator('.nb-editor-category')).toHaveText(longName);
-    await expect(page.locator('.nb-note-category')).toBeVisible();
+    await expect(page.locator('.nb-title-input')).toHaveValue('未命名笔记');
+    const longId = (await categoryTree(host)).items.find(item => item.name === longName).id;
+    await expect.poll(async () => (await host.tool('manage_notes', {action: 'list', category: longId})).total).toBe(1);
     const overflow = await page.locator('.nb-editor-head, .nb-properties, .nb-list-heading h2').evaluateAll(nodes => nodes.filter(node => node.scrollWidth > node.clientWidth + 1).length);
     expect(overflow).toBe(0);
     await assertContained(page);
@@ -715,7 +713,6 @@ test('directory lazy loading, note/category dragging, guarded undo and mobile na
     await enterSource(page);
     const original = await sourceRaw(page);
     await sourceEditor(page).evaluate(element => { window.__directorySourceDOM = element; });
-    await page.getByRole('tab', {name: '目录', exact: true}).click();
     const panel = page.locator('.nb-directory-panel');
     await expect(panel).toBeVisible();
     await expect(panel.locator('.nb-directory-file')).toHaveCount(0);

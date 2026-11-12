@@ -7,6 +7,7 @@
     "close": "关闭",
     "refresh": "刷新",
     "back": "返回对话",
+    "backChat": "Chat",
     "loading": "加载中…",
     "save": "保存",
     "saving": "保存中…",
@@ -20,8 +21,7 @@
     "fontSerif": "阅读衬线",
     "fontMono": "等宽",
     "fontPreview": "把值得留下的内容，放在这里。",
-    "fontDefault": "默认",
-    "fontHint": "即时预览，保存后应用于笔记阅读与编辑。"
+    "fontDefault": "默认"
   },
   "en": {
     "mdMode": "Markdown view",
@@ -31,6 +31,7 @@
     "close": "Close",
     "refresh": "Refresh",
     "back": "Back to chat",
+    "backChat": "Chat",
     "loading": "Loading…",
     "save": "Save",
     "saving": "Saving…",
@@ -44,7 +45,6 @@
     "fontSerif": "Serif",
     "fontMono": "Monospace",
     "fontPreview": "Keep the things worth remembering.",
-    "fontDefault": "Default",
-    "fontHint": "Preview now; save to apply to note reading and editing."
+    "fontDefault": "Default"
   }
 }

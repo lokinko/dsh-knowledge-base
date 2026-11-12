@@ -4,12 +4,6 @@ export function createStudio({h,t,Icon,noteCategoryKey,noteTime}){
     return String(value||'').replace(/!\[[^\]]*\]\([^)]*(?:\)|$)/g,'').replace(/\[([^\]]+)\]\([^)]*(?:\)|$)/g,'$1').replace(/```[^\n]*\n?|```/g,' ').replace(/^\s{0,3}(?:#{1,6}\s+|>\s*|[-*+]\s+(?:\[[ xX]\]\s*)?)/gm,'').replace(/[`*_~]/g,'').replace(/\s+/g,' ').trim();
   }
 
-  function NotebookHero({counts={},total,loading}){
-    return h('p',{className:'nb-library-summary',role:'status'},
-      loading&&counts.all==null?t('loading'):
-        Number(total??counts.all??0).toLocaleString()+' '+t('nbStudioTotal')+' · '+t('nbCollectionHint'));
-  }
-
   function NoteLibraryCard({note,active=false,busy=false,onOpen,categoryLabel}){
     const icon=note.category==='reading'?'book':note.category==='code'?'code':note.category==='journal'?'calendar':'note';
     const teaser=notebookTeaser(note.excerpt);
@@ -37,5 +31,5 @@ export function createStudio({h,t,Icon,noteCategoryKey,noteTime}){
           ...tags.slice(0,5).map(tag=>h('span',{key:tag,className:'badge rounded-pill'},'#'+tag)))));
   }
 
-  return {NotebookHero,NoteLibraryCard};
+  return {NoteLibraryCard};
 }

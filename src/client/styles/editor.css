@@ -77,7 +77,7 @@
 .dn-workspace .nb-editor-head {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   flex-wrap: wrap;
   gap: 10px 14px;
   min-height: 56px;
@@ -87,52 +87,15 @@
   background: transparent;
   font-family: var(--nb-ui-font);
 }
-.dn-workspace .nb-editor-identity {
-  display: flex;
-  flex: 1 1 220px;
-  align-items: center;
-  gap: 7px 10px;
-  min-width: 0;
-}
-.dn-workspace .nb-editor-title {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  color: var(--nb-ink);
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 14px;
-  font-weight: 600;
-}
-.dn-workspace .nb-mobile-back {
-  display: inline-flex;
-  flex-shrink: 0;
-  min-height: 30px;
-  padding: 5px 8px;
-  white-space: nowrap;
-}
-.dn-workspace .nb-editor-category {
-  flex: 0 1 auto;
-  min-width: 0;
-  max-width: min(180px, 30%);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: var(--nb-muted);
-  font-size: 11px;
-}
 .dn-workspace .nb-save-state {
   min-width: 0;
-  max-width: 180px;
+  margin-right: auto;
   overflow: hidden;
+  color: var(--nb-danger);
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: var(--nb-faint);
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1.6;
-}
-.dn-workspace .nb-save-state.is-warning {
-  color: var(--nb-danger);
 }
 .dn-workspace .nb-editor-actions {
   display: flex;
@@ -198,6 +161,15 @@
   max-width: none;
   margin: 0;
   padding: 24px clamp(24px, 3cqi, 36px) 36px;
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+.dn-workspace .nb-document > .em-md-field {
+  margin-bottom: 22px;
+}
+.dn-workspace .nb-document > .tm-attachments {
+  margin-top: auto;
 }
 .dn-workspace .nb-workspace.is-focused .nb-document {
   max-width: 1040px;
@@ -239,7 +211,7 @@
   border-bottom: 1px solid var(--nb-line);
   font-family: var(--nb-ui-font);
 }
-.dn-workspace .nb-properties label {
+.dn-workspace .nb-properties :is(label, .nb-tags-input) {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -247,7 +219,7 @@
   color: var(--nb-muted);
   font-size: 11px;
 }
-.dn-workspace .nb-properties label > span {
+.dn-workspace .nb-properties :is(label, .nb-tags-input) > span {
   flex-shrink: 0;
 }
 .dn-workspace .nb-properties :is(input, select) {
@@ -398,16 +370,6 @@
     align-items: flex-start;
     gap: 8px;
     padding: 10px 12px;
-  }
-  .dn-workspace .nb-editor-identity {
-    width: 100%;
-  }
-  .dn-workspace .nb-save-state {
-    flex: 1;
-    min-width: 70px;
-  }
-  .dn-workspace .nb-editor-category {
-    display: none;
   }
   .dn-workspace .nb-editor-actions {
     justify-content: flex-end;

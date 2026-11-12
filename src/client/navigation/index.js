@@ -2,7 +2,7 @@ import {BUILTIN_CATEGORIES,categoryDropMove,categoryRowPosition} from '../catego
 import {DirectoryNoteCache,directoryRows,directoryWindow,categoryAncestors,visibleExpandedCategories,categoryMoveInverse,categoryUndoAllowed,DIRECTORY_ROW_HEIGHT} from './model.js';
 
 export function createDirectoryNavigation({R,h,t,Icon,Button}){
- function DirectoryPanel({categories,activeCategory,activeNoteId,onSelectCategory,onOpenNote,onCreateNote,onManage,loadNotes,onMoveNote,refreshToken,disabled=false}){
+ function DirectoryPanel({categories,activeCategory,activeNoteId,onSelectCategory,onOpenNote,onCreateNote,loadNotes,onMoveNote,refreshToken,disabled=false}){
   const latest=R.useRef(null);latest.current={categories,loadNotes,onMoveNote,onOpenNote,onSelectCategory,onCreateNote};
   const [cache]=R.useState(()=>new DirectoryNoteCache((...args)=>latest.current.loadNotes(...args)));
   const [cacheVersion,setCacheVersion]=R.useState(0),[expanded,setExpanded]=R.useState(()=>new Set(categoryAncestors(categories.tree,activeCategory)));
@@ -141,9 +141,7 @@ export function createDirectoryNavigation({R,h,t,Icon,Button}){
    h('div',{className:'nb-directory-toolbar'},
     h('strong',null,t('nbDirectoryTitle')),
     h('button',{type:'button',className:'nb-directory-action',disabled:locked,onClick:()=>begin('create'),title:t('nbDirectoryAddRoot'),'aria-label':t('nbDirectoryAddRoot')},h(Icon,{name:'folder',size:14}),h(Icon,{name:'plus',size:11})),
-    h('button',{type:'button',className:'nb-directory-action',disabled:locked||!selectedCategory,onClick:()=>selectedCategory&&onCreateNote?.(selectedCategory.id),title:t('nbDirectoryNewNote'),'aria-label':t('nbDirectoryNewNote')},h(Icon,{name:'plus',size:14})),
-    h('button',{type:'button',className:'nb-directory-action',disabled:locked||!selectedCategory||BUILTIN_CATEGORIES.includes(selectedCategory.id),onClick:()=>begin('rename',selectedCategory),title:t('nbDirectoryRename'),'aria-label':t('nbDirectoryRename')},h(Icon,{name:'type',size:14})),
-    h('button',{type:'button',className:'nb-directory-action',disabled:locked,onClick:onManage,title:t('nbDirectoryManage'),'aria-label':t('nbDirectoryManage')},h(Icon,{name:'list',size:14}))),
+    h('button',{type:'button',className:'nb-directory-action',disabled:locked||!selectedCategory,onClick:()=>selectedCategory&&onCreateNote?.(selectedCategory.id),title:t('nbDirectoryNewNote'),'aria-label':t('nbDirectoryNewNote')},h(Icon,{name:'plus',size:14}))),
    h('label',{className:'nb-directory-search'},h('span',{className:'nb-directory-search-label'},t('nbDirectorySearch')),h('input',{type:'search',value:search,placeholder:t('nbDirectorySearchPlaceholder'),'aria-label':t('nbDirectorySearch'),onChange:event=>{setSearch(event.target.value);setScrollTop(0);if(viewport.current)viewport.current.scrollTop=0;}})),
    form&&h('form',{className:'nb-directory-form',onSubmit:submit},
     h('label',{htmlFor:formId},t(form.kind==='rename'?'nbDirectoryRename':form.id?'nbDirectoryAddChild':'nbDirectoryAddRoot')+(form.id?' · '+categories.categoryLabel(form.id):'')),
@@ -151,13 +149,13 @@ export function createDirectoryNavigation({R,h,t,Icon,Button}){
     h('div',{className:'nb-directory-form-actions'},h('button',{type:'submit',disabled:locked||!name.trim()},t('nbDirectorySave')),h('button',{type:'button',disabled:busy,onClick:()=>setForm(null)},t('nbDirectoryCancel')))),
    history&&h('button',{type:'button',className:'nb-directory-undo',disabled:locked,onClick:undo},h(Icon,{name:'back',size:13}),t('nbDirectoryUndo')),
    categories.error&&h('div',{className:'nb-directory-error',role:'alert'},categories.error,h('button',{type:'button',disabled:locked,onClick:()=>categories.refresh()},t('nbDirectoryRefresh'))),
-   h('div',{ref:viewport,className:'nb-directory-viewport',role:'tree','aria-label':t('nbDirectoryTitle'),style:{overflowY:'auto',minHeight:0,flex:'1 1 auto'},onScroll:event=>setScrollTop(event.currentTarget.scrollTop)},
+   h('div',{ref:viewport,className:'nb-directory-viewport'+(drop?.id===null?' is-root-over':''),role:'tree','aria-label':t('nbDirectoryTitle'),style:{overflowY:'auto',minHeight:0,flex:'1 1 auto'},onScroll:event=>setScrollTop(event.currentTarget.scrollTop),
+    onDragOver:event=>{if(!event.target?.closest?.('.nb-directory-row'))over(event,null);},onDrop:event=>{if(!event.target?.closest?.('.nb-directory-row'))dropped(event,null);}},
     h('div',{'aria-hidden':true,className:'nb-directory-spacer',style:{height:window.top}}),
     ...rows.slice(window.start,window.end).map(renderRow),
     h('div',{'aria-hidden':true,className:'nb-directory-spacer',style:{height:window.bottom}}),
     !rows.length&&h('p',{className:'nb-directory-no-match'},t('nbDirectoryNoMatch'))),
-   h('div',{className:'nb-directory-root-drop'+(drop?.id===null?' is-over':''),onDragOver:event=>over(event,null),onDrop:event=>dropped(event,null)},t('nbDirectoryDropRoot')),
-   h('p',{className:'nb-directory-notice',role:'status','aria-live':'polite'},dropLabel||notice||t(search?'nbDirectorySearchHint':'nbDirectoryDragHint')));
+   h('p',{className:'nb-directory-notice',role:'status','aria-live':'polite',hidden:!(dropLabel||notice)},dropLabel||notice));
  }
  return {DirectoryPanel};
 }

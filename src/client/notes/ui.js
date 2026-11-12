@@ -3,30 +3,27 @@ import {groupLibraryNotes} from '../studio/sections.js';
 import {createNotesHistory} from './history.js';
 import {createNoteEditor} from './editor.js';
 
-export function createNotesUI({R,h,t,Icon,Button,AutoTextarea,MarkdownField,MarkdownPreview,DocumentOutline,useCategories,CategoryNavigation,CategoryPicker,CategoryManager,DirectoryPanel,CommandMenu,ShortcutHelp,AttachmentPanel,NoteStorageSettings,NotebookHero,NoteLibraryCard,CoauthorPanel,noteCache,notesRequest,noteFieldsEqual,noteTime,localCalendar}){
+export function createNotesUI({R,h,t,Icon,Button,AutoTextarea,MarkdownField,MarkdownPreview,DocumentOutline,useCategories,CategoryNavigation,CategoryPicker,CategoryManager,DirectoryPanel,CommandMenu,ShortcutHelp,AttachmentPanel,NoteSettings,NoteLibraryCard,CoauthorPanel,noteCache,notesRequest,noteFieldsEqual,noteTime,localCalendar}){
 const {NotesHistory}=createNotesHistory({R,h,t,Button,MarkdownPreview,notesRequest,noteTime});
 const {NoteEditor}=createNoteEditor({R,h,t,Icon,Button,AutoTextarea,MarkdownField,DocumentOutline,CategoryPicker,AttachmentPanel,NotesHistory,noteCache,notesRequest,noteFieldsEqual,noteTime});
-function NotesWorkspace({appearance,slotProps,initialNoteId,onInitialConsumed,initialCreateToken,onInitialCreateConsumed}){
+function NotesWorkspace({appearance,onAppearanceChange,slotProps,initialNoteId,onInitialConsumed,initialCreateToken,onInitialCreateConsumed}){
  const categoryState=useCategories();
  const [categoryManager,setCategoryManager]=R.useState(false);
  const [directoryEpoch,setDirectoryEpoch]=R.useState(0),[navigationOpen,setNavigationOpen]=R.useState(false);
- const [navigationTab,setNavigationTab]=R.useState(()=>{try{return localStorage.getItem('dsh.note.navigation-tab')==='directory'?'directory':'notes';}catch{return 'notes';}}),[commandMode,setCommandMode]=R.useState(null),[shortcutsOpen,setShortcutsOpen]=R.useState(false);
+ const [commandMode,setCommandMode]=R.useState(null),[shortcutsOpen,setShortcutsOpen]=R.useState(false);
  const editorCommands=R.useRef(null);
- function chooseNavigation(tab){setNavigationTab(tab);try{localStorage.setItem('dsh.note.navigation-tab',tab);}catch{}}
  const isCategory=id=>categoryState.tree.items.some(item=>item.id===id);
  const [chatOpen,setChatOpen]=R.useState(()=>{try{return localStorage.getItem('dsh.todo-manager.chat-open')==='true';}catch{return false;}}),[chatFocused,setChatFocused]=R.useState(false),[narrow,setNarrow]=R.useState(false),[coauthorMeta,setCoauthorMeta]=R.useState(null);
  const splitRef=R.useRef(null),editorRef=R.useRef(null);
- const [storageSettings,setStorageSettings]=R.useState(false);
+ const [settings,setSettings]=R.useState(null);
  const [focused,setFocused]=R.useState(false);
- const catalogScroll=R.useRef(null),catalogSections=R.useRef(new Map());
- const [activeSection,setActiveSection]=R.useState('');
  const [libraryLayout,setLibraryLayout]=R.useState(()=>{try{return localStorage.getItem('dsh.todo-manager.notes-layout')==='list'?'list':'grid';}catch{return 'grid';}});
  function chooseLayout(value){setLibraryLayout(value);try{localStorage.setItem('dsh.todo-manager.notes-layout',value);}catch{}}
  const [navigation]=R.useState(()=>new NoteNavigation());
  const [view,setView]=R.useState('all'),[query,setQuery]=R.useState(''),[tag,setTag]=R.useState(''),[offset,setOffset]=R.useState(0),[data,setData]=R.useState({notes:[],total:0,counts:{}}),[opened,setOpened]=R.useState(null),[drafts,setDrafts]=R.useState([]),[loading,setLoading]=R.useState(true),[busy,setBusy]=R.useState(false),[error,setError]=R.useState('');
  const mounted=R.useRef(true),sequence=R.useRef(0),fileInput=R.useRef(null),refreshTimer=R.useRef(0),refreshRef=R.useRef(null);
  function refreshDrafts(){try{const latest=new Map();for(const record of noteCache.records())latest.set(record.noteId,record);setDrafts([...latest.values()].reverse());}catch{}}
- const refresh=R.useCallback(async()=>{const current=++sequence.current;setLoading(true);try{const result=await notesRequest({action:'list',limit:50,offset,query:query.trim(),...(isCategory(view)?{category:view}:{}),...(view==='pinned'?{pinnedOnly:true}:{}),trashed:view==='trash',...(tag.trim().replace(/^#+/,'')?{tag:tag.trim().replace(/^#+/,'')}:{})});if(mounted.current&&current===sequence.current){setData(result);setError('');}}catch{if(mounted.current&&current===sequence.current)setError('nbError');}finally{if(mounted.current&&current===sequence.current)setLoading(false);}},[view,query,tag,offset,categoryState.tree.revision]);
+ const refresh=R.useCallback(async()=>{const current=++sequence.current;setLoading(true);try{const result=await notesRequest({action:'list',limit:50,offset,query:query.trim(),...(isCategory(view)?{category:view}:{}),trashed:view==='trash',...(tag.trim().replace(/^#+/,'')?{tag:tag.trim().replace(/^#+/,'')}:{})});if(mounted.current&&current===sequence.current){setData(result);setError('');}}catch{if(mounted.current&&current===sequence.current)setError('nbError');}finally{if(mounted.current&&current===sequence.current)setLoading(false);}},[view,query,tag,offset,categoryState.tree.revision]);
  refreshRef.current=refresh;
  R.useEffect(()=>{const timer=setTimeout(refresh,180);refreshDrafts();return()=>clearTimeout(timer);},[refresh]);
  R.useEffect(()=>{let active=true,timer=0;const update=()=>{clearTimeout(timer);timer=setTimeout(()=>{if(active)refreshDrafts();},120);};noteCache.ready?.then(()=>{if(active)refreshDrafts();},()=>{if(active)setError('wbDraftUnavailable');});const off=noteCache.subscribeRecords?.(update);return()=>{active=false;clearTimeout(timer);off?.();};},[]);
@@ -68,15 +65,15 @@ function replaceFrom(entry,note,focusTitle=false){if(!mounted.current)return;con
   }catch{setError('nbError');setDirectoryEpoch(value=>value+1);return null;}
  }
  const loadDirectoryNotes=R.useCallback((category,{offset=0,limit=100}={})=>notesRequest({action:'list',category,includeDescendants:false,offset,limit}),[]);
- const categories=[['all','nbAll','book'],['pinned','nbPinned','pin'],['document','nbDocument','note'],['reading','nbReading','book'],['code','nbCode','code'],['journal','nbJournal','calendar'],['trash','nbTrash','trash']];
+ const categories=[['all','nbAll','book'],['document','nbDocument','note'],['reading','nbReading','book'],['code','nbCode','code'],['journal','nbJournal','calendar'],['trash','nbTrash','trash']];
   const currentLabel=isCategory(view)?categoryState.categoryLabel(view):t(categories.find(item=>item[0]===view)?.[1]||'nbAll');
   const newNote=()=>create(isCategory(view)?view:'document');
   const actions=[
    {id:'quick-open',label:t('wbQuickOpen'),keys:'Mod+P',icon:'search',run:()=>setCommandMode('notes')},
    {id:'new',label:t('nbNew'),keys:'Mod+Shift+N',icon:'plus',run:newNote},
-   {id:'search',label:t('wbSearchNotes'),keys:'Mod+Shift+F',icon:'search',run:()=>{chooseNavigation('notes');requestAnimationFrame(()=>splitRef.current?.querySelector('.nb-search')?.focus());}},
+   {id:'search',label:t('wbSearchNotes'),keys:'Mod+Shift+F',icon:'search',run:()=>{if(opened)closeNote();requestAnimationFrame(()=>splitRef.current?.querySelector('.nb-search')?.focus());}},
    {id:'folders',label:t('nbCatManage'),icon:'folder',run:()=>setCategoryManager(true)},
-   {id:'storage',label:t('nbStorageTitle'),icon:'folder',run:()=>setStorageSettings(true)},
+   {id:'settings',label:t('nbSettings'),icon:'settings',run:()=>setSettings('appearance')},
    {id:'shortcuts',label:t('wbShortcuts'),keys:'Mod+/',icon:'list',run:()=>setShortcutsOpen(true)},
    ...(opened?.note?[
     {id:'save',label:t('save'),keys:'Mod+S',icon:'check',run:()=>editorCommands.current?.save()},
@@ -108,24 +105,6 @@ function replaceFrom(entry,note,focusTitle=false){if(!mounted.current)return;con
    if(found){event.preventDefault();event.stopPropagation();found.run();}
   }
   const sections=R.useMemo(()=>groupLibraryNotes(data.notes,view),[data.notes,view]);
-  const currentSection=sections.some(section=>section.key===activeSection)?activeSection:sections[0]?.key;
-  function scrollCatalog(key){
-    const list=catalogScroll.current,section=catalogSections.current.get(key);
-    if(!list||!section)return;
-    const top=section.getBoundingClientRect().top-list.getBoundingClientRect().top+list.scrollTop;
-    list.scrollTo({top,behavior:'auto'});
-    setActiveSection(key);
-  }
-  function trackCatalog(){
-    const list=catalogScroll.current;if(!list)return;
-    const top=list.getBoundingClientRect().top+40;
-    let key=sections[0]?.key;
-    for(const section of sections){
-      const node=catalogSections.current.get(section.key);
-      if(node&&node.getBoundingClientRect().top<=top)key=section.key;
-    }
-    if(key)setActiveSection(key);
-  }
   function renderCard(note){
     return h(NoteLibraryCard,{key:note.id,note,categoryLabel:categoryState.categoryLabel,active:opened?.note?.id===note.id,busy,onOpen:()=>openNote(note.id)});
   }
@@ -134,7 +113,7 @@ function replaceFrom(entry,note,focusTitle=false){if(!mounted.current)return;con
       key,type:'button',className:'nb-nav-item nav-link'+(view===key?' is-active active':''),
       title:t(label),'aria-label':t(label),'aria-current':view===key?'page':undefined,onClick:()=>chooseView(key)
     },h(Icon,{name:icon,size:16}),h('span',{className:'nb-nav-label'},t(label)),
-      key!=='pinned'&&h('small',{className:'nb-nav-count'},data.counts[key]??0));
+      h('small',{className:'nb-nav-count'},data.counts[key]??0));
   }
   function toolButton(icon,label,onClick,disabled=false){
     return h('button',{type:'button',className:'nb-nav-item',title:t(label),'aria-label':t(label),disabled,onClick},
@@ -147,25 +126,25 @@ function replaceFrom(entry,note,focusTitle=false){if(!mounted.current)return;con
         h(Icon,{name:'plus',size:16}),h('span',{className:'nb-nav-label'},t('nbNew')))),
     h('nav',{className:'nb-sidebar-nav nav nav-pills flex-column','aria-label':t('nbWorkspaceNavigation')},
       h('section',{className:'nb-nav-group'},
-        h('h3',{className:'nb-nav-group-title'},t('nbLibraryGroup')),...categories.slice(0,2).map(navigationItem)),
+        h('h3',{className:'nb-nav-group-title'},t('nbLibraryGroup')),navigationItem(categories[0])),
       h('section',{className:'nb-nav-group'},
         h('h3',{className:'nb-nav-group-title'},t('nbCategory')),
-        h(CategoryNavigation,{categories:categoryState,value:view,onChange:chooseView,counts:data.counts,onManage:()=>setCategoryManager(true),disabled:categoryState.loading})),
+        h(CategoryNavigation,{categories:categoryState,value:view,onChange:chooseView,counts:data.counts,onManage:()=>setCategoryManager(true),disabled:categoryState.loading}),
+        navigationItem(categories.at(-1))),
+      h('section',{className:'nb-nav-group'},
+        h('h3',{className:'nb-nav-group-title'},t('nbToolsGroup')),
+        toolButton('upload','nbImport',()=>fileInput.current?.click(),busy)),
       h('section',{className:'nb-nav-group nb-category-foot'},
-        h('h3',{className:'nb-nav-group-title'},t('nbToolsGroup')),navigationItem(categories[6]),
-        toolButton('calendar','nbToday',()=>create('journal'),busy),
-        toolButton('upload','nbImport',()=>fileInput.current?.click(),busy),
-        toolButton('folder','nbStorageTitle',()=>setStorageSettings(true)))));
-  const directoryVisible=!!opened&&navigationTab==='directory'&&view!=='trash';
+        toolButton('settings','nbSettings',()=>setSettings('appearance')))));
+  const directoryVisible=!!opened&&view!=='trash';
   const list=h('section',{className:'nb-list-panel tm-bs'+(directoryVisible?' is-directory':''),'aria-label':t('nbLibraryTab')},
     h('header',{className:'nb-list-head'},
       h('div',{className:'nb-list-heading'},
-        h('div',null,h('h2',{title:currentLabel},h('span',{className:'nb-list-category-label'},currentLabel),h('span',{className:'nb-view-count'},data.total)),
-          !opened&&h(NotebookHero,{counts:data.counts,total:data.total,loading})),
-        h('div',{className:'nb-list-actions'},
+        h('div',null,h('h2',{title:currentLabel},h('span',{className:'nb-list-category-label'},currentLabel),h('span',{className:'nb-view-count'},data.total))),
+        !directoryVisible&&h('div',{className:'nb-list-actions'},
           h('button',{type:'button',className:'em-icon nb-command-trigger','aria-label':t('wbCommands'),title:t('wbCommands')+' · Ctrl+Shift+P',onClick:()=>setCommandMode('commands')},'⋯'),
           h(Button,{icon:'list',label:t('nbCatManage'),className:'nb-category-manage',onClick:()=>setCategoryManager(true)}),
-          h(Button,{icon:'folder',label:t('nbStorageTitle'),className:'nb-compact-tools',onClick:()=>setStorageSettings(true)}),
+          h(Button,{icon:'settings',label:t('nbSettings'),className:'nb-compact-tools',onClick:()=>setSettings('appearance')}),
           h(Button,{icon:'refresh',label:t('refresh'),onClick:()=>{setDirectoryEpoch(value=>value+1);refresh();syncRemote();},disabled:loading}),
           h(Button,{icon:'upload',label:t('nbImport'),onClick:()=>fileInput.current?.click(),disabled:busy}),
           h(Button,{icon:'plus',label:t('nbNew'),disabled:busy,onClick:newNote}))),
@@ -177,40 +156,27 @@ function replaceFrom(entry,note,focusTitle=false){if(!mounted.current)return;con
           h('div',{className:'btn-group nb-layout-switch',role:'group','aria-label':t('nbLayout')},
             h(Button,{icon:'matrix',label:t('nbGrid'),pressed:libraryLayout==='grid',onClick:()=>chooseLayout('grid')}),
             h(Button,{icon:'list',label:t('nbList'),pressed:libraryLayout==='list',onClick:()=>chooseLayout('list')})))),
-      !opened&&h('nav',{className:'nb-filter-strip','aria-label':t('nbQuickFilters')},
-        ...[...categories.slice(0,2).map(([key,label])=>({id:key,label:t(label)})),...categoryState.flattened.filter(item=>item.parentId===null).slice(0,6)].map(item=>h('button',{
-          key:item.id,type:'button',className:'nb-filter-chip',title:item.label,'aria-pressed':view===item.id,onClick:()=>chooseView(item.id)
-        },h('span',{className:'nb-filter-chip-label'},item.label),item.id!=='pinned'&&h('span',null,data.counts[item.id]??0)))),
       drafts.length>0&&h('details',{className:'nb-drafts'},
         h('summary',null,t('pendingDrafts')+' · '+drafts.length),
         ...drafts.map(record=>h('button',{key:record.key,type:'button',onClick:()=>openNote(record.noteId,record)},record.fields.title||t('nbUntitled'))))),
     opened&&h('div',{className:'nb-navigation-bar'},
-      h('div',{className:'nb-navigation-tabs',role:'tablist','aria-label':t('wbLibraryPane')},...['notes','directory'].map(tab=>h('button',{key:tab,type:'button',role:'tab','aria-selected':navigationTab===tab,onClick:()=>chooseNavigation(tab)},t(tab==='notes'?'wbNotesTab':'wbDirectoryTab')))),
+      h('button',{type:'button',className:'em-btn btn btn-sm nb-back-library',title:t('nbBackList'),'aria-label':t('nbBackList'),onClick:closeNote},h(Icon,{name:'back',size:15}),h('span',null,t('nbBackList'))),
       h('div',{className:'nb-navigation-tools'},h(Button,{icon:'back',label:t('wbBackWriting'),className:'nb-close-navigation',onClick:()=>setNavigationOpen(false)}),h('button',{type:'button',className:'em-icon',title:t('wbShortcuts'),'aria-label':t('wbShortcuts'),onClick:()=>setShortcutsOpen(true)},'?'))),
     error&&h('p',{className:'nb-warning',role:'alert'},t(error),error==='wbDraftUnavailable'&&h('button',{type:'button',className:'em-btn',disabled:busy,onClick:retryDrafts},t('wbRetryDrafts'))),
     noteCache.recoveryWarning&&h('p',{className:'nb-warning',role:'alert'},t('wbDraftRecoveryWarning'),h('button',{type:'button',className:'em-btn',disabled:busy,onClick:retryDrafts},t('wbRetryDrafts'))),
     categoryState.error&&h('p',{className:'nb-warning',role:'alert'},categoryState.error),
-    directoryVisible?h('div',{className:'nb-directory-host'},h(DirectoryPanel,{categories:categoryState,activeCategory:view,activeNoteId:opened?.note?.id,onSelectCategory:id=>{setView(id);setOffset(0);},onOpenNote:note=>openNote(note.id),onCreateNote:create,onManage:()=>setCategoryManager(true),loadNotes:loadDirectoryNotes,onMoveNote:moveDirectoryNote,refreshToken:String(data.counts.all)+':'+String(data.counts.trash)+':'+directoryEpoch,disabled:busy})):h('div',{className:'nb-collection-layout'},
-      h('div',{ref:catalogScroll,className:'nb-note-list','aria-busy':loading,onScroll:trackCatalog},
+    directoryVisible?h('div',{className:'nb-directory-host'},h(DirectoryPanel,{categories:categoryState,activeCategory:view,activeNoteId:opened?.note?.id,onSelectCategory:id=>{setView(id);setOffset(0);},onOpenNote:note=>openNote(note.id),onCreateNote:create,loadNotes:loadDirectoryNotes,onMoveNote:moveDirectoryNote,refreshToken:String(data.counts.all)+':'+String(data.counts.trash)+':'+directoryEpoch,disabled:busy})):h('div',{className:'nb-collection-layout'},
+      h('div',{className:'nb-note-list','aria-busy':loading},
         loading&&!data.notes.length?h('p',{className:'nb-muted',role:'status'},t('loading')):
         data.notes.length?(opened?data.notes.map(renderCard):sections.map(section=>h('section',{
-          key:section.key,className:'nb-note-section','data-section':section.key,
-          ref:node=>{if(node)catalogSections.current.set(section.key,node);else catalogSections.current.delete(section.key);}
+          key:section.key,className:'nb-note-section','data-section':section.key
         },
           h('header',{className:'nb-note-section-head'},h('h3',null,t(section.label)),h('span',null,section.notes.length)),
           h('div',{className:'nb-note-section-grid'},...section.notes.map(renderCard))))):
         h('div',{className:'nb-list-empty'},
-          h(Icon,{name:'note',size:26}),h('p',null,t(query||tag?'nbNoResults':'nbNoNotes')),
-          h('p',{className:'nb-muted'},t('nbStudioEmptyHint')),
+          h(Icon,{name:'note',size:26}),(query||tag)&&h('p',null,t('nbNoResults')),
           (query||tag)&&h('button',{type:'button',className:'em-btn btn btn-sm',onClick:()=>{setQuery('');setTag('');setOffset(0);}},t('nbStudioClearFilters')),
-          h('button',{type:'button',className:'em-btn btn btn-sm',disabled:busy,onClick:newNote},t('nbNew')))),
-      !opened&&sections.length>0&&h('aside',{className:'nb-collection-index','aria-label':t('nbOnThisPage')},
-        h('h3',null,t('nbOnThisPage')),
-        h('nav',null,...sections.map(section=>h('button',{
-          key:section.key,type:'button',className:'nb-collection-link',
-          'aria-current':currentSection===section.key?'location':undefined,onClick:()=>scrollCatalog(section.key)
-        },h('span',null,t(section.label)),h('small',null,section.notes.length)))),
-        h('p',{className:'nb-collection-summary'},t('nbVisibleNotes')+' '+data.notes.length+' / '+data.total))),
+          h('button',{type:'button',className:'em-btn btn btn-sm',disabled:busy,onClick:newNote},t('nbNew'))))),
     !directoryVisible&&h('footer',{className:'nb-list-foot'},h('span',null,data.total+' '+t('nbNotesCount')),
       h('div',null,
         h('button',{type:'button',className:'em-btn btn btn-sm',title:t('nbStudioPrevious'),'aria-label':t('nbStudioPrevious'),disabled:offset===0||loading,onClick:()=>setOffset(Math.max(0,offset-50))},h(Icon,{name:'back',size:16})),
@@ -218,7 +184,7 @@ function replaceFrom(entry,note,focusTitle=false){if(!mounted.current)return;con
   const documentPanel=opened&&h('main',{className:'nb-document-panel','aria-label':t('nbContent')},
     opened.note?h(NoteEditor,{
       key:opened.token,note:opened.note,draft:opened.draft,focusTitle:opened.focusTitle,fontSize:appearance.fontSize,
-      categories:categoryState,onManageCategories:()=>setCategoryManager(true),onActions:actions=>{editorCommands.current=actions;},onOpenNavigation:()=>{chooseNavigation('directory');setNavigationOpen(true);setFocused(false);},onSession:attachEditor,onToggleChat:toggleChat,focused,onToggleFocus:()=>setFocused(value=>!value),onSaved:changed,onReplace:note=>replaceFrom(opened,note),onClose:closeNote,onTrashed:()=>trashedFrom(opened)
+      onActions:actions=>{editorCommands.current=actions;},onOpenNavigation:()=>{setNavigationOpen(true);setFocused(false);},onSession:attachEditor,onToggleChat:toggleChat,focused,onToggleFocus:()=>setFocused(value=>!value),onSaved:changed,onReplace:note=>replaceFrom(opened,note),onTrashed:()=>trashedFrom(opened)
     }):opened.orphan&&h('div',{className:'nb-orphan'},
       h('button',{type:'button',className:'em-btn btn btn-sm',title:t('nbBackList'),onClick:closeNote},h(Icon,{name:'back',size:16}),t('nbBackList')),
       h('h2',null,opened.orphan.fields.title||t('nbUntitled')),
@@ -230,7 +196,7 @@ function replaceFrom(entry,note,focusTitle=false){if(!mounted.current)return;con
     sidebar,list,documentPanel,
     h('input',{ref:fileInput,type:'file',accept:'.md,.markdown,.txt,text/markdown,text/plain',hidden:true,onChange:importNote}));
  const linkedNote=opened?.note&&(coauthorMeta?.id===opened.note.id?{...opened.note,title:coauthorMeta.title}:opened.note);
- return h('div',{ref:splitRef,onKeyDownCapture:handleWorkspaceKey,className:'nb-main-split'+(opened?' has-document':'')+(chatOpen&&chatFocused?' chat-focused':'')+(opened&&focused?' focus-mode':'')},h('div',{className:'nb-main-left'},library),commandMode&&h(CommandMenu,{key:commandMode,mode:commandMode,actions,onOpenNote:note=>openNote(note.id),categoryLabel:categoryState.categoryLabel,onClose:()=>setCommandMode(null)}),shortcutsOpen&&h(ShortcutHelp,{actions,onClose:()=>setShortcutsOpen(false)}),categoryManager&&h(CategoryManager,{categories:categoryState,onClose:()=>setCategoryManager(false)}),storageSettings&&h(NoteStorageSettings,{onClose:()=>setStorageSettings(false),beforeApply:async()=>!editorRef.current||await editorRef.current.flush(),onApplied:async()=>{await categoryState.refresh();refreshDrafts();await refreshRef.current();}}),chatOpen&&linkedNote&&h(CoauthorPanel,{note:linkedNote,slotProps,onIdle:syncRemote,onToggle:toggleChat}));
+ return h('div',{ref:splitRef,onKeyDownCapture:handleWorkspaceKey,className:'nb-main-split'+(opened?' has-document':'')+(chatOpen&&chatFocused?' chat-focused':'')+(opened&&focused?' focus-mode':'')},h('div',{className:'nb-main-left'},library),commandMode&&h(CommandMenu,{key:commandMode,mode:commandMode,actions,onOpenNote:note=>openNote(note.id),categoryLabel:categoryState.categoryLabel,onClose:()=>setCommandMode(null)}),shortcutsOpen&&h(ShortcutHelp,{actions,onClose:()=>setShortcutsOpen(false)}),categoryManager&&h(CategoryManager,{categories:categoryState,onClose:()=>setCategoryManager(false)}),settings&&h(NoteSettings,{section:settings,onSectionChange:setSettings,onClose:()=>setSettings(null),appearance,onAppearanceChange,layout:libraryLayout,onLayoutChange:chooseLayout,storage:{beforeApply:async()=>!editorRef.current||await editorRef.current.flush(),onApplied:async()=>{await categoryState.refresh();refreshDrafts();await refreshRef.current();}}}),chatOpen&&linkedNote&&h(CoauthorPanel,{note:linkedNote,slotProps,onIdle:syncRemote,onToggle:toggleChat}));
 }
 
 return {NotesWorkspace};

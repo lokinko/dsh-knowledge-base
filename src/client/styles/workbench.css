@@ -24,7 +24,7 @@
   background: transparent;
   box-shadow: none;
 }
-.dn-workspace :is(.em-font-panel, .tm-attachments) {
+.dn-workspace .tm-attachments {
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
 }
@@ -41,15 +41,12 @@
 .dn-workspace .nb-workspace.has-note :is(.nb-collection-layout, .nb-note-list) {
   grid-template-columns: minmax(0, 1fr);
 }
-.dn-workspace .nb-workspace.has-note .nb-collection-index {
-  display: none;
-}
 .dn-workspace .nb-document {
   max-width: none;
   margin-inline: 0;
 }
 
-/* Tabs replace the contents of the existing left pane; they do not create a column. */
+/* With a note open, the left pane shows the category directory. */
 .dn-workspace .nb-navigation-bar {
   display: flex;
   align-items: center;
@@ -60,22 +57,18 @@
   background: transparent;
   font-family: var(--nb-ui-font);
 }
-.dn-workspace .nb-navigation-tabs {
-  display: flex;
-  align-items: stretch;
-  flex: 1 1 0;
-  gap: 2px;
-  min-width: 0;
-  padding: 3px;
-  border: 0;
-  border-radius: var(--nb-control-radius);
-  background: var(--nb-state);
-  font-family: var(--nb-ui-font);
+.dn-workspace .nb-back-library {
+  display: inline-flex;
+  flex-shrink: 0;
+  min-height: 30px;
+  padding: 5px 8px;
+  white-space: nowrap;
 }
 .dn-workspace .nb-navigation-tools {
   display: flex;
   align-items: center;
   flex: 0 0 auto;
+  margin-left: auto;
   gap: 3px;
   min-width: 0;
 }
@@ -83,36 +76,12 @@
   flex: 0 0 auto;
   white-space: nowrap;
 }
-.dn-workspace .nb-navigation-tabs > button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  flex: 1;
-  min-height: 28px;
-  padding: 3px 10px;
-  border: 0;
-  border-radius: 7px;
-  background: transparent;
-  color: var(--nb-muted);
-  font: 500 12.5px/1.5 var(--nb-ui-font);
-  cursor: pointer;
-  transition: background-color 140ms ease, color 140ms ease;
-}
-.dn-workspace .nb-navigation-tabs > button:hover {
-  color: var(--nb-ink);
-}
-.dn-workspace .nb-navigation-tabs > button[aria-selected="true"] {
-  background: var(--nb-glass-strong);
-  color: var(--nb-ink);
-  box-shadow: var(--nb-control-shadow);
-}
-.dn-workspace .nb-navigation-tools > .nb-close-navigation {
+.dn-workspace :is(.nb-navigation-tools > .nb-close-navigation, .nb-editor-actions > .nb-open-navigation) {
   display: none;
   flex: 0 0 auto;
   padding-inline: 9px;
 }
-.dn-workspace :is(.nb-list-controls, .nb-list-head, .nb-list-filters, .nb-directory-host, .nb-directory-panel, .nb-navigation-bar, .nb-navigation-tabs)[hidden] {
+.dn-workspace :is(.nb-list-controls, .nb-list-head, .nb-list-filters, .nb-directory-host, .nb-directory-panel, .nb-navigation-bar)[hidden] {
   display: none;
 }
 .dn-workspace .nb-directory-host {
@@ -356,20 +325,12 @@
   outline-offset: -2px;
   background: var(--nb-state);
 }
-.dn-workspace .nb-directory-root-drop {
-  flex: 0 0 auto;
-  margin: 8px 12px 0;
-  padding: 8px;
-  border: 1px dashed var(--nb-line);
-  border-radius: 5px;
-  color: var(--nb-faint);
-  text-align: center;
-  font-size: 10px;
+.dn-workspace .nb-directory-viewport.is-root-over {
+  outline: 1px dashed var(--nb-focus);
+  outline-offset: -4px;
 }
-.dn-workspace .nb-directory-root-drop.is-over {
-  border-color: var(--nb-focus);
-  background: var(--nb-state);
-  color: var(--nb-ink);
+.dn-workspace .nb-directory-notice[hidden] {
+  display: none;
 }
 .dn-workspace :is(.nb-directory-notice, .nb-directory-error, .nb-directory-no-match) {
   flex: 0 0 auto;
@@ -784,7 +745,7 @@
   min-width: 0;
   overflow-wrap: anywhere;
 }
-.dn-workspace :is(.nb-navigation-tabs button, .nb-directory-panel button, .nb-directory-panel input, .nb-command-dialog button, .nb-command-dialog input, .nb-shortcut-dialog button, .nb-source-editor .cm-search button, .nb-source-editor .cm-search input):focus-visible {
+.dn-workspace :is(.nb-directory-panel button, .nb-directory-panel input, .nb-command-dialog button, .nb-command-dialog input, .nb-shortcut-dialog button, .nb-source-editor .cm-search button, .nb-source-editor .cm-search input):focus-visible {
   outline: 2px solid var(--nb-focus);
   outline-offset: -2px;
 }
@@ -801,7 +762,8 @@
   .dn-workspace .nb-workspace.has-note.navigation-open > .nb-document-panel {
     display: none;
   }
-  .dn-workspace .nb-workspace.has-note.navigation-open .nb-navigation-tools > .nb-close-navigation {
+  .dn-workspace .nb-workspace.has-note.navigation-open .nb-navigation-tools > .nb-close-navigation,
+  .dn-workspace .nb-editor-actions > .nb-open-navigation {
     display: inline-flex;
   }
 }
@@ -871,7 +833,7 @@
   }
 }
 @media (pointer: coarse) {
-  .dn-workspace :is(.nb-directory-action, .nb-navigation-tabs > button) {
+  .dn-workspace :is(.nb-directory-action) {
     min-height: 36px;
   }
   /* Virtualized rows remain exactly 32px, matching the model's geometry. */
@@ -881,13 +843,13 @@
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .dn-workspace :is(.nb-directory-toggle > svg, .nb-navigation-tabs > button, .nb-command-option) {
+  .dn-workspace :is(.nb-directory-toggle > svg, .nb-command-option) {
     transition: none;
     animation: none;
   }
 }
 @media (forced-colors: active) {
-  .dn-workspace :is(.nb-navigation-tabs > button[aria-selected="true"], .nb-directory-row.is-active, .nb-directory-row.is-selected, .nb-command-option.is-selected, .nb-writing-field .em-md-toggle[aria-pressed="true"]) {
+  .dn-workspace :is(.nb-directory-row.is-active, .nb-directory-row.is-selected, .nb-command-option.is-selected, .nb-writing-field .em-md-toggle[aria-pressed="true"]) {
     outline: 1px solid Highlight;
     outline-offset: -2px;
   }

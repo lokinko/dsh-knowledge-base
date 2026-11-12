@@ -2,7 +2,7 @@ import {BUILTIN_CATEGORIES,initialCategoryTree,categoryChildren,flattenCategorie
 
 export function createCategoriesUI({R,h,t,Icon,Button,notebookRequest,noteCategoryKey}){
  const endpoint='/api/dsh-note/categories';
- const viewLabel=id=>t(({all:'nbAll',pinned:'nbPinned',trash:'nbTrash'})[id]||noteCategoryKey[id]||'nbCatUnknown');
+ const viewLabel=id=>t(({all:'nbAll',trash:'nbTrash'})[id]||noteCategoryKey[id]||'nbCatUnknown');
  const itemLabel=item=>item.name||t(noteCategoryKey[item.id]||'nbCatUnknown');
  function useCategories(){
   const [tree,setTree]=R.useState(initialCategoryTree),[loading,setLoading]=R.useState(true),[busy,setBusy]=R.useState(false),[error,setError]=R.useState(null),[ready,setReady]=R.useState(false);
@@ -42,8 +42,8 @@ export function createCategoriesUI({R,h,t,Icon,Button,notebookRequest,noteCatego
   const options=categories.flattened;
   const option=(id,label)=>h('option',{key:id,value:id},label);
   return h('select',{...props,id,name,required,className,value,disabled:disabled||categories.busy||categories.loading,'aria-label':ariaLabel||props['aria-label']||t('nbCategory'),onChange:event=>onChange?.(event.target.value)},
-   includeViews&&option('all',viewLabel('all')),includeViews&&option('pinned',viewLabel('pinned')),
-   value&&!options.some(item=>item.id===value)&&!['all','pinned','trash'].includes(value)&&option(value,categories.categoryLabel(value)),
+   includeViews&&option('all',viewLabel('all')),
+   value&&!options.some(item=>item.id===value)&&!['all','trash'].includes(value)&&option(value,categories.categoryLabel(value)),
    ...options.map(item=>option(item.id,'\u00a0\u00a0'.repeat(item.depth)+item.label+(item.depth?' · '+item.path:''))),
    includeViews&&option('trash',viewLabel('trash')));
  }
@@ -58,7 +58,7 @@ export function createCategoriesUI({R,h,t,Icon,Button,notebookRequest,noteCatego
     h('button',{type:'button',className:'nb-nav-item nb-cat-nav-button'+(active?' is-active active':''),'aria-current':active?'page':undefined,disabled:locked,onClick:()=>onChange?.(id)},h('span',null,label),counts[id]!==undefined&&h('small',null,counts[id]))),
     children.length&&open?h('ul',{className:'nb-cat-nav-children'},...children.map(item=>row(item.id,itemLabel(item),depth+1,categoryChildren(categories.tree,item.id)))):null);
   }
-  return h('div',{className:'nb-category-navigation '+className},h('nav',{'aria-label':t('nbCategory')},h('ul',{className:'nb-cat-nav-list'},includeViews&&row('all',viewLabel('all')),includeViews&&row('pinned',viewLabel('pinned')),...categoryChildren(categories.tree).map(item=>row(item.id,itemLabel(item),0,categoryChildren(categories.tree,item.id))),includeViews&&row('trash',viewLabel('trash')))),
+  return h('div',{className:'nb-category-navigation '+className},h('nav',{'aria-label':t('nbCategory')},h('ul',{className:'nb-cat-nav-list'},includeViews&&row('all',viewLabel('all')),...categoryChildren(categories.tree).map(item=>row(item.id,itemLabel(item),0,categoryChildren(categories.tree,item.id))),includeViews&&row('trash',viewLabel('trash')))),
    categories.loading&&h('p',{className:'nb-cat-status',role:'status'},t('loading')),h(CategoryError,{categories}),
    h('button',{type:'button',className:'nb-nav-item nb-cat-manage',disabled:locked,onClick:onManage},h(Icon,{name:'folder',size:15}),t('nbCatManage')));
  }

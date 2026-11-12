@@ -1,9 +1,9 @@
-export function createStorageSettings({R,h,t,Icon,Button,notebookRequest}){
+export function createStorageSettings({R,h,t,Icon,notebookRequest}){
 // The DSH entry provides the host React instance and shared request service.
-function NoteStorageSettings({onClose,beforeApply,onApplied}){
- const dialog=R.useRef(null),pathInput=R.useRef(null),alive=R.useRef(false),generation=R.useRef(0),operation=R.useRef('loading');
+function NoteStorageSettings({onClose,beforeApply,onApplied,onApplyingChange}){
+ const pathInput=R.useRef(null),alive=R.useRef(false),generation=R.useRef(0),operation=R.useRef('loading');
  const callbacks=R.useRef({onClose,beforeApply,onApplied});callbacks.current={onClose,beforeApply,onApplied};
- const ids=R.useId(),headingId=ids+'-heading',pathId=ids+'-path',hintId=ids+'-hint',messageId=ids+'-message';
+ const ids=R.useId(),pathId=ids+'-path',hintId=ids+'-hint',messageId=ids+'-message';
  const [status,setStatus]=R.useState(null),[directory,setDirectory]=R.useState(''),[phase,setPhase]=R.useState('loading'),[message,setMessage]=R.useState(null),[checked,setChecked]=R.useState(null);
  const endpoint='/api/dsh-note/note-storage';
  const busy=phase!=='',applying=phase==='applying';
@@ -21,14 +21,14 @@ function NoteStorageSettings({onClose,beforeApply,onApplied}){
   finally{finish(token);}
  }
  R.useEffect(()=>{
-  alive.current=true;operation.current='loading';const token=++generation.current,node=dialog.current;
-  const previous=node?.ownerDocument.activeElement;
-  if(node&&!node.open)node.showModal();
+  alive.current=true;operation.current='loading';const token=++generation.current;
   readStatus().then(next=>{if(current(token)){setStatus(next);setDirectory(next.directory||'');}})
    .catch(error=>{if(current(token))setMessage({key:'nbStorageLoadError',kind:'error',detail:detail(error)});})
    .finally(()=>{finish(token);if(current(token))pathInput.current?.focus({preventScroll:true});});
-  return()=>{alive.current=false;generation.current++;operation.current='';if(node?.open)node.close();if(previous?.isConnected)previous.focus({preventScroll:true});};
+  return()=>{alive.current=false;generation.current++;operation.current='';};
  },[]);
+ R.useEffect(()=>{onApplyingChange?.(applying);},[applying]);
+ R.useEffect(()=>()=>onApplyingChange?.(false),[]);
  function editDirectory(value){if(operation.current)return;setDirectory(value);setChecked(null);setMessage(null);}
  async function check(){
   const token=begin('checking');if(token===null)return;
@@ -80,9 +80,8 @@ function NoteStorageSettings({onClose,beforeApply,onApplied}){
  const counts=status?.counts||{};
  const candidate=directory.trim(),separator=candidate.includes('\\')?'\\':'/';
  const location=candidate?candidate.replace(/[\\/]+$/,'')+separator+'dsh-notebook':t('nbStorageDefaultLocation');
- return h('dialog',{ref:dialog,className:'nb-storage-dialog tm-bs','aria-labelledby':headingId,'aria-describedby':hintId,'aria-busy':busy,onCancel:event=>{event.preventDefault();close();},onKeyDown:event=>{if(event.key==='Enter'&&(event.nativeEvent?.isComposing||event.keyCode===229))event.preventDefault();}},
-  h('form',{className:'nb-storage-form',onSubmit:apply},
-   h('header',{className:'nb-storage-header'},h('div',{className:'nb-storage-heading'},h(Icon,{name:'book',size:19}),h('div',null,h('h2',{id:headingId},t('nbStorageTitle')),h('p',null,t('nbStorageSubtitle')))),h(Button,{icon:'close',label:t('close'),onClick:close,disabled:applying,className:'nb-storage-close'})),
+ const keepComposition=event=>{if(event.key==='Enter'&&(event.nativeEvent?.isComposing||event.keyCode===229))event.preventDefault();};
+ return h('form',{className:'nb-storage-form',onSubmit:apply,'aria-describedby':hintId,'aria-busy':busy,onKeyDown:keepComposition},
    h('div',{className:'nb-storage-body'},
     h('section',{className:'nb-storage-current','aria-label':t('nbStorageCurrent')},h('div',{className:'nb-storage-section-heading'},h('h3',null,t('nbStorageCurrent')),h('button',{type:'button',className:'btn btn-sm nb-storage-refresh',disabled:busy,onClick:refresh},h(Icon,{name:'refresh',size:12}),t('nbStorageReload'))),
      h('p',{className:'nb-storage-current-path'},phase==='loading'&&!status?t('loading'):status?(status.mode==='directory'?status.directory:t('nbStorageDefaultLocation')):t('nbStorageUnavailable')),
@@ -95,7 +94,7 @@ function NoteStorageSettings({onClose,beforeApply,onApplied}){
     h('div',{className:'nb-storage-preserve'},h(Icon,{name:'book',size:16}),h('p',null,t('nbStoragePreserve'))),
     message&&h('div',{id:messageId,className:'nb-storage-message'+(message.kind==='error'?' is-error':' is-success'),role:message.kind==='error'?'alert':'status'},h('p',null,t(message.key)),message.detail&&h('pre',null,message.detail)),
     applying&&h('div',{className:'nb-storage-working',role:'status','aria-live':'polite'},h('span',{className:'nb-storage-progress','aria-hidden':true}),h('p',null,t('nbStorageApplyingHint')))),
-   h('footer',{className:'nb-storage-footer'},h('span',null,t('nbStorageApplyHint')),h('div',{className:'nb-storage-buttons'},h('button',{type:'button',className:'btn btn-sm',disabled:applying,onClick:close},t('close')),h('button',{type:'submit',className:'btn btn-sm btn-primary',disabled:busy||!status},t(applying?'nbStorageApplying':'nbStorageApply'))))));
+   h('footer',{className:'nb-storage-footer'},h('span',null,t('nbStorageApplyHint')),h('div',{className:'nb-storage-buttons'},h('button',{type:'button',className:'btn btn-sm',disabled:applying,onClick:close},t('close')),h('button',{type:'submit',className:'btn btn-sm btn-primary',disabled:busy||!status},t(applying?'nbStorageApplying':'nbStorageApply')))));
 }
 
 return {NoteStorageSettings};

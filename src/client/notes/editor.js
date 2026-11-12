@@ -1,7 +1,7 @@
 import {NoteEditSession} from './edit-session.js';
 
-export function createNoteEditor({R,h,t,Icon,Button,AutoTextarea,MarkdownField,DocumentOutline,CategoryPicker,AttachmentPanel,NotesHistory,noteCache,notesRequest,noteFieldsEqual,noteTime}){
-function NoteEditor({note,draft,onSaved,onReplace,onClose,onTrashed,focusTitle=false,fontSize,onSession,onToggleChat,focused=false,onToggleFocus,categories,onManageCategories,onActions,onOpenNavigation}){
+export function createNoteEditor({R,h,t,Icon,Button,AutoTextarea,MarkdownField,DocumentOutline,AttachmentPanel,NotesHistory,noteCache,notesRequest,noteFieldsEqual,noteTime}){
+function NoteEditor({note,draft,onSaved,onReplace,onTrashed,focusTitle=false,fontSize,onSession,onToggleChat,focused=false,onToggleFocus,onActions,onOpenNavigation}){
  const fieldActions=R.useRef(null);
  const [outlineOpen,setOutlineOpen]=R.useState(false);
  const headingPrefix='nb-heading-'+R.useId().replace(/[^a-zA-Z0-9_-]/g,'');
@@ -24,6 +24,7 @@ function NoteEditor({note,draft,onSaved,onReplace,onClose,onTrashed,focusTitle=f
  async function latest(){setOperation(true);setNotice('');try{const result=await notesRequest({action:'get',id:note.id});session.abandon();onReplace(result.note);}catch{setNotice('nbError');}finally{setOperation(false);}}
  function exportNote(){const data=session.snapshot().fields;let name=(data.title||t('nbUntitled')).replace(/[<>:"/\\|?*\u0000-\u001f]/g,'_').replace(/[. ]+$/,'').slice(0,120)||'note';if(/^(con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i.test(name))name='note-'+name;const url=URL.createObjectURL(new Blob([data.content],{type:'text/markdown;charset=utf-8'}));downloadUrls.current.add(url);download.current.href=url;download.current.download=name+'.md';download.current.click();const timer=setTimeout(()=>{URL.revokeObjectURL(url);downloadUrls.current.delete(url);downloadTimers.current.delete(timer);},1000);downloadTimers.current.add(timer);}
  R.useLayoutEffect(()=>{onActions?.({save,exportNote,togglePreview:()=>fieldActions.current?.toggleMode(),split:()=>fieldActions.current?.chooseMode('split'),toggleOutline:()=>setOutlineOpen(value=>!value),runCommand:id=>fieldActions.current?.runCommand(id)});return()=>onActions?.(null);});
+ const saveWarning=state.conflict||(state.dirty&&((!state.cacheDurable&&!state.cachePending)||state.status==='offline'));
  const status=state.conflict?'nbConflict':state.status==='saved'?'nbSaved':state.status==='saving'?'nbSaving':state.status==='offline'?'nbOffline':state.cachePending?'wbCaching':!state.cacheDurable?'nbCacheFailed':'nbCached';
  return h('section',{className:'nb-editor tm-bs'+(outlineOpen?' has-outline':''),onKeyDown:e=>{
     if(e.nativeEvent.isComposing||e.keyCode===229)return;
@@ -31,19 +32,12 @@ function NoteEditor({note,draft,onSaved,onReplace,onClose,onTrashed,focusTitle=f
     if((e.ctrlKey||e.metaKey)&&(e.key.toLowerCase()==='s'||e.key==='Enter')){e.preventDefault();save();}
   }},
     h('header',{className:'nb-editor-head'},
-      h('div',{className:'nb-editor-identity'},
-        h('button',{type:'button',className:'em-btn btn btn-sm nb-mobile-back',title:t('nbBackList'),'aria-label':t('nbBackList'),onClick:onClose},
-          h(Icon,{name:'back',size:16}),h('span',null,t('nbBackList'))),
-        h('strong',{className:'nb-editor-title',title:fields.title||t('nbUntitled')},fields.title||t('nbUntitled')),
-        h('span',{className:'nb-editor-category',title:categories.categoryLabel(fields.category)},categories.categoryLabel(fields.category)),
-        h('span',{className:'nb-save-state'+(state.conflict||(state.dirty&&((!state.cacheDurable&&!state.cachePending)||state.status==='offline'))?' is-warning':''),role:'status'},
-          t(status)+(state.status==='saved'&&state.updatedAt?' · '+noteTime(state.updatedAt):''))),
+      saveWarning&&h('span',{className:'nb-save-state',role:'status'},t(status)),
       h('div',{className:'nb-editor-actions'},
         h(Button,{icon:'folder',label:t('wbDirectoryTab'),className:'nb-open-navigation',onClick:onOpenNavigation}),
         h(Button,{icon:focused?'unfocus':'focus',label:t(focused?'nbFocusExit':'nbFocusEnter'),pressed:focused,onClick:onToggleFocus}),
         h(Button,{icon:'list',label:t(outlineOpen?'nbOutlineHide':'nbOutlineShow'),pressed:outlineOpen,expanded:outlineOpen,controls:headingPrefix+'-outline',className:'nb-outline-toggle',onClick:()=>setOutlineOpen(value=>!value)}),
         h(Button,{icon:'chat',label:t('coauthorToggle'),onClick:onToggleChat}),
-        h(Button,{icon:'pin',label:t(fields.pinned?'nbUnpin':'nbPin'),pressed:fields.pinned,disabled:locked,onClick:()=>change({pinned:!fields.pinned})}),
         h(Button,{icon:'history',label:t('nbHistory'),onClick:()=>setHistory(true),disabled:operation}),
         h(Button,{icon:'download',label:t('nbExport'),onClick:exportNote}),
         note.trashedAt?h('button',{type:'button',className:'em-btn em-save btn btn-sm btn-primary',disabled:operation,onClick:restoreTrash},t('nbRestore')):
@@ -73,14 +67,11 @@ function NoteEditor({note,draft,onSaved,onReplace,onClose,onTrashed,focusTitle=f
           disabled:locked,placeholder:t('nbUntitled'),'aria-label':t('nbNoteTitle'),onChange:e=>change({title:e.target.value})
         }),
         h('div',{className:'nb-properties'},
-          h('label',null,h('span',null,t('nbCategory')),
-            h(CategoryPicker,{categories,className:'form-select form-select-sm nb-note-category',value:fields.category,disabled:locked||categories.loading||categories.busy,ariaLabel:t('nbCategory'),onChange:value=>change({category:value})})),
-          h('button',{type:'button',className:'em-btn nb-category-manage',onClick:onManageCategories},t('nbCatManage')),
           fields.category==='journal'&&h('label',null,h('span',null,t('nbDate')),
             h('input',{className:'form-control form-control-sm',type:'date',value:fields.journalDate,disabled:locked,onChange:e=>change({journalDate:e.target.value})})),
-          h('label',{className:'nb-tags-input'},h('span',null,t('nbTags')),
+          h('div',{className:'nb-tags-input'},h('span',{'aria-hidden':true},t('nbTags')),
             h('input',{
-              ref:tagInput,className:'form-control form-control-sm',type:'text',value:tags,maxLength:820,
+              ref:tagInput,className:'form-control form-control-sm',type:'text',value:tags,maxLength:820,'aria-label':t('nbTags'),
               disabled:locked,placeholder:t('nbTagsHint'),'aria-invalid':tagError,onChange:e=>editTags(e.target.value),
               onBlur:()=>{if(!tagError)setTags(session.snapshot().fields.tags.join(', '));}
             }))),
