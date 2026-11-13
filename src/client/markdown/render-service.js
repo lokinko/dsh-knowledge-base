@@ -1,4 +1,4 @@
-import {renderDocument,getMarkdownHeadings} from './renderer.js';
+import {renderDocument,getMarkdownHeadings,renderCardMarkdown} from './renderer.js';
 
 export const ASYNC_MARKDOWN_THRESHOLD=20000;
 
@@ -58,8 +58,8 @@ export function createRenderService({workerSource,createWorker,threshold=ASYNC_M
     const epoch=channel.epoch;
     const checkActive=()=>{if(disposed||epoch!==channel.epoch)throw abortError();};
     if(disposed)return Promise.reject(abortError('Markdown renderer disposed'));
-    const fallback=()=>{checkActive();return kind==='headings'?getMarkdownHeadings(source):renderDocument(source,options);};
-    if(source.length<threshold||!ensureWorker())return Promise.resolve().then(fallback);
+    const fallback=()=>{checkActive();return kind==='headings'?getMarkdownHeadings(source):kind==='card'?renderCardMarkdown(source,options):renderDocument(source,options);};
+    if((kind!=='card'&&source.length<threshold)||!ensureWorker())return Promise.resolve().then(fallback);
     return new Promise((resolve,reject)=>{
       for(const [id,message] of queued){
         const previous=pending.get(id);
@@ -93,6 +93,12 @@ export function createRenderService({workerSource,createWorker,threshold=ASYNC_M
     const promise=request('headings',source,undefined,channel);
     channel.headings={source,promise};return promise;
   }
+  function card(source,{consumer,title=''}={}){
+    source=String(source??'').slice(0,1600);title=String(title);
+    const channel=channelFor(consumer);
+    if(channel.card?.source===source&&channel.card.title===title)return channel.card.promise;
+    const promise=request('card',source,{title},channel);channel.card={source,title,promise};return promise;
+  }
   function cancel(consumer){
     const key=consumerKey(consumer),channel=channels.get(key);if(!channel)return;
     channel.epoch++;channels.delete(key);
@@ -100,7 +106,7 @@ export function createRenderService({workerSource,createWorker,threshold=ASYNC_M
       if(request.channel!==channel)continue;
       request.reject(abortError());pending.delete(id);queued.delete(id);
     }
-    channel.render=null;channel.headings=null;
+    channel.render=null;channel.headings=null;channel.card=null;
     // Never free activeId early: the worker cannot interrupt its synchronous
     // parser. Its eventual response advances unrelated consumers in FIFO order.
     dispatch();
@@ -111,5 +117,5 @@ export function createRenderService({workerSource,createWorker,threshold=ASYNC_M
     for(const request of pending.values())request.reject(abortError('Markdown renderer disposed'));
     pending.clear();queued.clear();channels.clear();activeId=null;
   }
-  return {render,headings,cancel,dispose,threshold};
+  return {render,headings,card,cancel,dispose,threshold};
 }

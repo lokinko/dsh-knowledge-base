@@ -39,7 +39,7 @@ window.__ModuleLoader__.load({
       const attachments=createAttachments({R,h,t,Icon});
       const storage=createStorageSettings({R,h,t,...common,...services});
       const settings=createNoteSettings({R,h,t,...common,...storage});
-      const studio=createStudio({h,t,Icon,...services});
+      const studio=createStudio({R,h,t,Icon,...services,renderService:markdown.renderService});
       const {NotesWorkspace}=createNotesUI({R,h,t,...common,...controls,...markdown,...services,...categoryUI,...directoryUI,...commandUI,...coauthor,...attachments,...settings,...studio});
 
       function Page(slotProps){

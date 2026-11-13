@@ -22,10 +22,10 @@ function NotesWorkspace({appearance,onAppearanceChange,slotProps,initialNoteId,o
  const [libraryLayout,setLibraryLayout]=R.useState(()=>{try{return localStorage.getItem('dsh.todo-manager.notes-layout')==='list'?'list':'grid';}catch{return 'grid';}});
  function chooseLayout(value){setLibraryLayout(value);try{localStorage.setItem('dsh.todo-manager.notes-layout',value);}catch{}}
  const [navigation]=R.useState(()=>new NoteNavigation());
- const [view,setView]=R.useState('all'),[query,setQuery]=R.useState(''),[tag,setTag]=R.useState(''),[offset,setOffset]=R.useState(0),[data,setData]=R.useState({notes:[],total:0,counts:{}}),[opened,setOpened]=R.useState(null),[drafts,setDrafts]=R.useState([]),[loading,setLoading]=R.useState(true),[busy,setBusy]=R.useState(false),[error,setError]=R.useState('');
+ const [view,setView]=R.useState('all'),[query,setQuery]=R.useState(''),[offset,setOffset]=R.useState(0),[data,setData]=R.useState({notes:[],total:0,counts:{}}),[opened,setOpened]=R.useState(null),[drafts,setDrafts]=R.useState([]),[loading,setLoading]=R.useState(true),[busy,setBusy]=R.useState(false),[error,setError]=R.useState('');
  const mounted=R.useRef(true),sequence=R.useRef(0),fileInput=R.useRef(null),refreshTimer=R.useRef(0),refreshRef=R.useRef(null);
  function refreshDrafts(){try{const latest=new Map();for(const record of noteCache.records())latest.set(record.noteId,record);setDrafts([...latest.values()].reverse());}catch{}}
- const refresh=R.useCallback(async()=>{const current=++sequence.current;setLoading(true);try{const result=await notesRequest({action:'list',limit:50,offset,query:query.trim(),...(isCategory(view)?{category:view}:{}),trashed:view==='trash',...(tag.trim().replace(/^#+/,'')?{tag:tag.trim().replace(/^#+/,'')}:{})});if(mounted.current&&current===sequence.current){setData(result);setError('');}}catch{if(mounted.current&&current===sequence.current)setError('nbError');}finally{if(mounted.current&&current===sequence.current)setLoading(false);}},[view,query,tag,offset,categoryState.tree.revision]);
+ const refresh=R.useCallback(async()=>{const current=++sequence.current;setLoading(true);try{const result=await notesRequest({action:'list',limit:50,offset,excerptLength:1600,query:query.trim(),...(isCategory(view)?{category:view}:{}),trashed:view==='trash'});if(mounted.current&&current===sequence.current){setData(result);setError('');}}catch{if(mounted.current&&current===sequence.current)setError('nbError');}finally{if(mounted.current&&current===sequence.current)setLoading(false);}},[view,query,offset,categoryState.tree.revision]);
  refreshRef.current=refresh;
  R.useEffect(()=>{if(categoryState.ready&&!['all','trash'].includes(view)&&!isCategory(view)){const target=resolveCategoryId(categoryState.tree,view);setView(isCategory(target)?target:'all');setOffset(0);}},[categoryState.tree.revision,categoryState.ready,view]);
  R.useEffect(()=>{const timer=setTimeout(refresh,180);refreshDrafts();return()=>clearTimeout(timer);},[refresh]);
@@ -128,15 +128,12 @@ function replaceFrom(entry,note,focusTitle=false){if(!mounted.current)return;con
   const directoryProps={categories:categoryState,activeCategory:view,activeNoteId:opened?.note?.id,onSelectCategory:id=>{setView(id);setOffset(0);},onOpenNote:note=>openNote(note.id),onCreateNote:create,loadNotes:loadDirectoryNotes,onMoveNote:moveDirectoryNote,onBeforeCategoryDelete:async()=>!editorRef.current||await editorRef.current.flush(),onCategoryDeleted:categoryDeleted,refreshToken:String(data.counts.all)+':'+String(data.counts.trash)+':'+directoryEpoch,navigationState:directoryState,disabled:busy};
   const sidebar=h('aside',{className:'nb-categories tm-bs','aria-label':t('nbLibraryTab')},
     h('div',{className:'nb-sidebar-head'},
-      h('h2',null,h('span',{className:'nb-library-mark'},h(Icon,{name:'book',size:15})),t('nbLibrary')),
-      h('button',{type:'button',className:'nb-new btn btn-primary',title:t('nbNew'),'aria-label':t('nbNew'),disabled:busy,onClick:newNote},
-        h(Icon,{name:'plus',size:16}),h('span',{className:'nb-nav-label'},t('nbNew')))),
+      h('h2',null,h('span',{className:'nb-library-mark'},h(Icon,{name:'book',size:15})),t('nbLibrary'))),
     h('nav',{className:'nb-sidebar-nav nav nav-pills flex-column','aria-label':t('nbWorkspaceNavigation')},
       h('section',{className:'nb-nav-group'},
         h('h3',{className:'nb-nav-group-title'},t('nbLibraryGroup')),navigationItem(categories[0])),
       h('section',{className:'nb-nav-group nb-sidebar-directory'},
         !directoryVisible&&h('div',{className:'nb-directory-host'},h(DirectoryPanel,directoryProps)),
-        toolButton('folder','nbCatManage',()=>setCategoryManager(true),categoryState.loading),
         navigationItem(categories.at(-1))),
       h('section',{className:'nb-nav-group'},
         h('h3',{className:'nb-nav-group-title'},t('nbToolsGroup')),
@@ -158,7 +155,6 @@ function replaceFrom(entry,note,focusTitle=false){if(!mounted.current)return;con
         h('input',{type:'search',className:'nb-search form-control',value:query,placeholder:t('nbSearch'),'aria-label':t('nbSearch'),onChange:e=>{setQuery(e.target.value);setOffset(0);}}),
         h('div',{className:'nb-list-filters'},
           h(CategoryPicker,{categories:categoryState,className:'nb-mobile-category form-select form-select-sm',value:view,ariaLabel:t('nbCategory'),includeViews:true,onChange:value=>{if(opened){setView(value);setOffset(0);}else chooseView(value);}}),
-          h('input',{className:'nb-tag-filter form-control form-control-sm',type:'search',value:tag,maxLength:41,placeholder:t('nbTagFilter'),'aria-label':t('nbTagFilter'),onChange:e=>{setTag(e.target.value);setOffset(0);}}),
           h('div',{className:'btn-group nb-layout-switch',role:'group','aria-label':t('nbLayout')},
             h(Button,{icon:'matrix',label:t('nbGrid'),pressed:libraryLayout==='grid',onClick:()=>chooseLayout('grid')}),
             h(Button,{icon:'list',label:t('nbList'),pressed:libraryLayout==='list',onClick:()=>chooseLayout('list')})))),
@@ -180,8 +176,8 @@ function replaceFrom(entry,note,focusTitle=false){if(!mounted.current)return;con
           h('header',{className:'nb-note-section-head'},h('h3',null,t(section.label)),h('span',null,section.notes.length)),
           h('div',{className:'nb-note-section-grid'},...section.notes.map(renderCard))))):
         h('div',{className:'nb-list-empty'},
-          h(Icon,{name:'note',size:26}),(query||tag)&&h('p',null,t('nbNoResults')),
-          (query||tag)&&h('button',{type:'button',className:'em-btn btn btn-sm',onClick:()=>{setQuery('');setTag('');setOffset(0);}},t('nbStudioClearFilters')),
+          h(Icon,{name:'note',size:26}),query&&h('p',null,t('nbNoResults')),
+          query&&h('button',{type:'button',className:'em-btn btn btn-sm',onClick:()=>{setQuery('');setOffset(0);}},t('nbStudioClearFilters')),
           h('button',{type:'button',className:'em-btn btn btn-sm',disabled:busy,onClick:newNote},t('nbNew'))))),
     !directoryVisible&&h('footer',{className:'nb-list-foot'},h('span',null,data.total+' '+t('nbNotesCount')),
       h('div',null,

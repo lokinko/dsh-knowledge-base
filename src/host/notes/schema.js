@@ -50,6 +50,7 @@ const writeIdentity = { ...identity, revision: revisionSchema };
 const versionIdentity = { ...identity, versionId: z.string().min(1) };
 const actionSchema = z.discriminatedUnion('action', [
   z.object({ action: z.literal('list'), query: z.string().optional(), category: categorySchema.optional(),
+    excerptLength: z.number().int().min(0).max(1600).default(160),
     includeDescendants: z.boolean().default(true),
     tag: z.string().min(1).max(40).optional(), pinnedOnly: z.boolean().optional(),
     trashed: z.boolean().default(false), offset: z.number().int().nonnegative().default(0),

@@ -1,9 +1,9 @@
-import {renderDocument,getMarkdownHeadings} from './renderer.js';
+import {renderDocument,getMarkdownHeadings,renderCardMarkdown} from './renderer.js';
 
 export function handleRenderRequest(request){
   const {id,kind,source,options}=request||{};
   try{
-    const value=kind==='headings'?getMarkdownHeadings(source):renderDocument(source,options);
+    const value=kind==='headings'?getMarkdownHeadings(source):kind==='card'?renderCardMarkdown(source,options):renderDocument(source,options);
     return {id,value};
   }catch(error){
     return {id,error:String(error?.message||error)};

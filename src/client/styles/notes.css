@@ -209,23 +209,6 @@
   box-shadow: var(--nb-control-shadow);
   color: var(--nb-muted);
 }
-.dn-workspace .nb-categories .nb-new:not(.nb-native-conversation *) {
-  justify-content: flex-start;
-  gap: 10px;
-  width: 100%;
-  min-height: 36px;
-  padding: 7px 10px;
-  flex-shrink: 0;
-  background: var(--nb-glass-strong);
-  color: var(--nb-ink);
-  box-shadow: var(--nb-control-shadow);
-  text-align: left;
-  font-size: 13px;
-}
-.dn-workspace .nb-categories .nb-new:not(.nb-native-conversation *):hover {
-  background: var(--nb-surface);
-  filter: none;
-}
 .dn-workspace .nb-sidebar-nav {
   display: flex;
   flex: 1 0 auto;
@@ -400,10 +383,6 @@
   gap: 8px;
   min-width: 0;
 }
-.dn-workspace .nb-list-filters input {
-  width: 160px;
-  min-height: 38px;
-}
 .dn-workspace .nb-mobile-category {
   display: none;
   max-width: 140px;
@@ -559,6 +538,7 @@
 }
 .dn-workspace .nb-note-row-main {
   min-width: 0;
+  width: 100%;
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -608,9 +588,7 @@
   letter-spacing: -.01em;
 }
 .dn-workspace .nb-note-excerpt {
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
+  display: block;
   margin: 0;
   overflow: hidden;
   overflow-wrap: anywhere;
@@ -619,6 +597,23 @@
   font-weight: 400;
   line-height: 1.7;
 }
+.dn-workspace .nb-note-excerpt.nb-card-markdown.em-markdown { color: var(--nb-muted); font-size: 13px; line-height: 1.7; }
+.dn-workspace .nb-card-markdown.em-markdown :is(h1,h2,h3,h4,h5,h6) { margin: .7em 0 .35em; font-size: 1.03em; line-height: 1.55; }
+.dn-workspace .nb-card-markdown.em-markdown > :first-child { margin-top: 0; }
+.dn-workspace .nb-card-markdown.em-markdown p { margin: 0 0 .65em; }
+.dn-workspace .nb-card-markdown.em-markdown :is(ul,ol) { margin: .4em 0; padding-inline-start: 1.5em; }
+.dn-workspace .nb-card-markdown.em-markdown li { margin: .15em 0; }
+.dn-workspace .nb-card-markdown.em-markdown .task-list-item { list-style: none; }
+.dn-workspace .nb-card-markdown.em-markdown .nb-card-task { margin-inline-start: -1.2em; }
+.dn-workspace .nb-card-markdown.em-markdown .nb-card-link { color: var(--nb-link); text-decoration: underline; text-underline-offset: 3px; }
+.dn-workspace .nb-card-markdown.em-markdown pre { margin: .6em 0; padding: 8px 10px; border: 0; overflow: hidden; font-size: 11.5px; white-space: pre-wrap; }
+.dn-workspace .nb-card-markdown.em-markdown pre code { white-space: pre-wrap; overflow-wrap: anywhere; }
+.dn-workspace .nb-card-markdown.em-markdown table { margin: .6em 0; font-size: .9em; }
+.dn-workspace .nb-card-markdown.em-markdown :is(th,td) { padding: 4px 7px; }
+.dn-workspace .nb-card-markdown.em-markdown img { max-height: 96px; margin: .5em 0; object-fit: contain; }
+.dn-workspace .nb-card-markdown.em-markdown .katex { font-size: 1.05em; }
+.dn-workspace .nb-card-markdown.em-markdown .katex-display { margin: .65em 0; max-width: 100%; overflow: hidden; }
+.dn-workspace .nb-card-placeholder { display: block; height: 68px; margin-top: 4px; border-radius: 4px; background: repeating-linear-gradient(to bottom,var(--nb-field) 0 10px,transparent 10px 24px); opacity: .6; }
 .dn-workspace .nb-note-row-tags {
   display: flex;
   flex-wrap: wrap;
@@ -632,7 +627,7 @@
 }
 .dn-workspace .nb-note-row-meta {
   display: flex;
-  flex-shrink: 0;
+  flex-shrink: 1;
   align-items: center;
   justify-content: flex-end;
   gap: 10px;
@@ -706,7 +701,8 @@
   -webkit-line-clamp: 1;
 }
 .dn-workspace .nb-workspace.layout-list:not(.has-note) .nb-note-excerpt {
-  -webkit-line-clamp: 1;
+  height: 3.4em;
+  max-height: 3.4em;
 }
 
 /* Grid layout: white cards with a hairline ring; the title carries the hierarchy. */
@@ -740,8 +736,10 @@
   line-height: 1.4;
 }
 .dn-workspace .nb-workspace.layout-grid:not(.has-note) .nb-note-excerpt {
-  -webkit-line-clamp: 3;
-  font-size: 12.5px;
+  height: 204px;
+  max-height: 204px;
+  padding-top: 3px;
+  font-size: 13px;
 }
 .dn-workspace .nb-workspace.layout-grid:not(.has-note) .nb-note-row-tags {
   margin-top: auto;
@@ -781,7 +779,7 @@
   width: 16px;
   height: 16px;
 }
-.dn-workspace .nb-workspace.has-note :is(.nb-tag-filter, .nb-layout-switch) {
+.dn-workspace .nb-workspace.has-note .nb-layout-switch {
   display: none;
 }
 .dn-workspace .nb-workspace.has-note .nb-list-filters {
@@ -970,10 +968,6 @@
   .dn-workspace .nb-list-filters {
     flex: 1;
     flex-wrap: wrap;
-  }
-  .dn-workspace .nb-list-filters input {
-    flex: 1;
-    width: 100px;
   }
   .dn-workspace .nb-collection-layout {
     padding-right: 8px;

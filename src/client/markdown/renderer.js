@@ -38,14 +38,16 @@ md.core.ruler.after('inline','todo-task-lists',state=>{
   if(offset<0)continue;
   const index=positions.length;positions.push(offset);item.token.attrJoin('class','task-list-item');item.list?.attrJoin('class','contains-task-list');
   token.children[0].content=token.children[0].content.replace(/^\[[ xX]\](?:[ \t]+|$)/,'');
-  const checkbox=new state.Token('html_inline','',0);checkbox.content=`<input type="checkbox" class="task-list-item-checkbox" data-md-task-index="${index}"${match[1]!==' '?' checked=""':''} aria-label="${md.utils.escapeHtml(token.content.slice(match[0].length,match[0].length+100)||'Task')}" /> `;
+  const checkbox=new state.Token('html_inline','',0);checkbox.content=state.env.card?`<span class="nb-card-task" aria-hidden="true">${match[1]!==' '?'☑':'☐'}</span> `:`<input type="checkbox" class="task-list-item-checkbox" data-md-task-index="${index}"${match[1]!==' '?' checked=""':''} aria-label="${md.utils.escapeHtml(token.content.slice(match[0].length,match[0].length+100)||'Task')}" /> `;
   token.children.unshift(checkbox);
  }
 });
 // Resolve historical references for this plugin without changing the stored Markdown.
 function attachmentRenderUrl(value){const legacy='/api/local-todo-manager/attachment-file?';return typeof value==='string'&&value.startsWith(legacy)?'/api/dsh-note/attachment-file?'+value.slice(legacy.length):value;}
 const linkOpen=md.renderer.rules.link_open||((tokens,index,options,env,self)=>self.renderToken(tokens,index,options));
-md.renderer.rules.link_open=(tokens,index,options,env,self)=>{const token=tokens[index];token.attrSet('href',attachmentRenderUrl(token.attrGet('href')||''));if(/^(?:https?:\/\/|\/api\/dsh-note\/attachment-file\?)/i.test(token.attrGet('href')||'')){token.attrSet('target','_blank');token.attrSet('rel','noopener noreferrer');}return linkOpen(tokens,index,options,env,self);};
+md.renderer.rules.link_open=(tokens,index,options,env,self)=>{if(env.card)return '<span class="nb-card-link">';const token=tokens[index];token.attrSet('href',attachmentRenderUrl(token.attrGet('href')||''));if(/^(?:https?:\/\/|\/api\/dsh-note\/attachment-file\?)/i.test(token.attrGet('href')||'')){token.attrSet('target','_blank');token.attrSet('rel','noopener noreferrer');}return linkOpen(tokens,index,options,env,self);};
+const linkClose=md.renderer.rules.link_close||((tokens,index,options,env,self)=>self.renderToken(tokens,index,options));
+md.renderer.rules.link_close=(tokens,index,options,env,self)=>env.card?'</span>':linkClose(tokens,index,options,env,self);
 const image=md.renderer.rules.image;
 md.renderer.rules.image=(tokens,index,options,env,self)=>{tokens[index].attrSet('src',attachmentRenderUrl(tokens[index].attrGet('src')||''));tokens[index].attrSet('loading','lazy');tokens[index].attrSet('decoding','async');return image(tokens,index,options,env,self);};
 function headingText(tokens){
@@ -133,6 +135,24 @@ export function setMarkdownTaskAt(source,positions,index,checked){
 export function renderMarkdown(source,{headingPrefix}={}){
  const rawSource=String(source??'');
  return md.render(rawSource,{rawSource,headingPrefix:typeof headingPrefix==='string'?headingPrefix:''});
+}
+export function renderCardMarkdown(source,{title=''}={}){
+ let rawSource=String(source??'').slice(0,1600),fence=null,math=null,offset=0;
+ // A cut-off block formula cannot render. Omit that trailing block rather than
+ // showing its TeX as ordinary prose. Fenced code keeps its literal delimiters.
+ for(const line of rawSource.split(/\r\n|\r|\n/)){
+  const text=line.trim(),marker=/^(`{3,}|~{3,})(.*)$/.exec(text);
+  if(!math&&marker){if(!fence)fence={character:marker[1][0],length:marker[1].length};else if(fence.character===marker[1][0]&&marker[1].length>=fence.length&&!marker[2].trim())fence=null;}
+  else if(!fence){
+   if(math){if(text.endsWith(math.close))math=null;}
+   else if(!/^(?: {4}|\t)/.test(line))for(const [open,close] of [['$$','$$'],['\\[','\\]']])if(text.startsWith(open)&&!text.slice(open.length).includes(close)){math={close,from:offset};break;}
+  }
+  offset+=line.length+(rawSource.slice(offset+line.length,offset+line.length+2)==='\r\n'?2:1);
+ }
+ if(math)rawSource=rawSource.slice(0,math.from).trimEnd();
+ const env={rawSource,card:true},tokens=md.parse(rawSource,env);
+ if(tokens[0]?.type==='heading_open'&&headingText(tokens[1]?.children).trim()===String(title).trim())tokens.splice(0,3);
+ return md.renderer.render(tokens,md.options,env);
 }
 export function getMarkdownHeadings(source){
  const rawSource=String(source??''),env={rawSource,collectHeadings:true};

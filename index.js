@@ -138,6 +138,7 @@ var actionSchema = z2.discriminatedUnion("action", [
     action: z2.literal("list"),
     query: z2.string().optional(),
     category: categoryIdSchema.optional(),
+    excerptLength: z2.number().int().min(0).max(1600).default(160),
     includeDescendants: z2.boolean().default(true),
     tag: z2.string().min(1).max(40).optional(),
     pinnedOnly: z2.boolean().optional(),
@@ -2173,9 +2174,9 @@ var clone3 = (value) => structuredClone(value);
 var compareText = (a, b) => a < b ? -1 : a > b ? 1 : 0;
 var noteOrder = (a, b) => Number(b.pinned) - Number(a.pinned) || Date.parse(b.updatedAt) - Date.parse(a.updatedAt) || compareText(a.id, b.id);
 var versionOrder = (a, b) => Date.parse(b.savedAt) - Date.parse(a.savedAt) || b.revision - a.revision || compareText(a.versionId, b.versionId);
-function metadata3(note) {
+function metadata3(note, excerptLength = 160) {
   const { content, ...rest } = note;
-  return { ...rest, excerpt: content.slice(0, 160), contentLength: content.length };
+  return { ...rest, excerpt: content.slice(0, excerptLength), contentLength: content.length };
 }
 function versionMetadata(version) {
   return {
@@ -2310,7 +2311,7 @@ var NotesStore = class {
       const matching = all.filter((note2) => Boolean(note2.trashedAt) === input.trashed && (!input.category || (input.includeDescendants ? lineage(note2.category).includes(input.category) || resolve2(note2.category) === input.category : resolve2(note2.category) === input.category)) && (!input.tag || note2.tags.includes(input.tag)) && (!input.pinnedOnly || note2.pinned) && (!query || [note2.title, note2.content, ...note2.tags].some((value) => value.toLowerCase().includes(query)))).sort(noteOrder);
       return {
         ok: true,
-        notes: matching.slice(input.offset, input.offset + input.limit).map((note2) => metadata3({ ...note2, category: resolve2(note2.category) })),
+        notes: matching.slice(input.offset, input.offset + input.limit).map((note2) => metadata3({ ...note2, category: resolve2(note2.category) }, input.excerptLength)),
         total: matching.length,
         offset: input.offset,
         limit: input.limit,
@@ -2444,6 +2445,7 @@ var parameters3 = {
     },
     versionId: { type: "string", minLength: 1, maxLength: 64, description: "Required for version and restore_version; obtain from versions." },
     query: { type: "string", maxLength: 2e5, description: "List search across title, Markdown and tags; case-insensitive." },
+    excerptLength: { type: "integer", minimum: 0, maximum: 1600, default: 160, description: "Maximum Markdown excerpt length per list item; the library requests a longer bounded preview." },
     tag: { type: "string", minLength: 1, maxLength: 40, description: "Exact tag filter for list." },
     pinnedOnly: { type: "boolean", description: "List pinned notes only; defaults to false." },
     trashed: { type: "boolean", description: "List trash instead of active notes; defaults to false." },

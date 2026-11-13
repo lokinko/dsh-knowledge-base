@@ -41,6 +41,17 @@ test('worker protocol renders safe output and headings without browser globals',
 function fakeWorker(){
   return {messages:[],terminated:false,postMessage(message){this.messages.push(message);},terminate(){this.terminated=true;},respond(index){this.onmessage({data:handleRenderRequest(this.messages[index])});}};
 }
+test('card previews use the worker even for short excerpts, reuse results and isolate document semantics',async()=>{
+ const worker=fakeWorker(),service=createRenderService({createWorker:()=>worker}),consumer={};
+ const first=service.card('# Same\n\n$x^2$',{consumer,title:'Same'});
+ assert.equal(worker.messages.length,1);assert.equal(worker.messages[0].kind,'card');
+ assert.equal(service.card('# Same\n\n$x^2$',{consumer,title:'Same'}),first);
+ worker.respond(0);const html=await first;assert.match(html,/katex/);assert.doesNotMatch(html,/<h1>/);
+ const changed=service.card('# Same\n\n$x^2$',{consumer,title:'Other'});worker.respond(1);assert.match(await changed,/<h1>/);
+ service.cancel(consumer);service.dispose();
+ const local=createRenderService({createWorker(){throw new Error('Blocked worker');}});
+ assert.match(await local.card('$x^2$'),/katex/);local.dispose();
+});
 test('service coalesces queued edits, ignores unrelated ids and reuses current render headings',async()=>{
   const worker=fakeWorker(),service=createRenderService({threshold:1,createWorker:()=>worker});
   const first=service.render('# First'),superseded=service.render('# Superseded');

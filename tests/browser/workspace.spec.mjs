@@ -265,7 +265,7 @@ test('mobile: navigation, note editing, coauthor switching and native isolation'
 test('new note, Markdown editing and typography keep working', async ({page}) => {
   const {host, errors} = await openWorkspace(page);
   try {
-    await page.locator('.nb-new').click();
+    await page.locator('.nb-list-actions').getByRole('button',{name:'新建笔记',exact:true}).click();
     await expect(page.locator('.nb-title-input')).toHaveValue('未命名笔记');
     await page.locator('.nb-title-input').fill('新写下的一页');
     await sourceContent(page).click();
@@ -318,6 +318,30 @@ test('search, source navigation and binary attachment remain functional', async 
     expect(await sourceEditor(page).evaluate(element => element === window.__attachmentSourceDOM)).toBe(true);
     expect(errors).toEqual([]);
   } finally { await page.evaluate(() => window.__disposeFixture?.()).catch(() => {}); await host.close(); }
+});
+
+for(const [theme,width] of [['dark',837],['light',837],['dark',390]])test(`library cleanup and structured card previews at ${theme} ${width}`,async({page})=>{
+ const {host,errors}=await openWorkspace(page,{theme,width,height:789,chatOpen:false});
+ try{
+  const content='# 项目手册\n\n## 项目资料\n\n策略 $q_\\theta$ 实时渲染。\n\n$$\n\\begin{aligned}\n\\pi_\\theta(a|s)\n\\end{aligned}\n\\tag{PG1}\n$$\n\n[交互设计稿](https://example.com/'+ 'x'.repeat(250)+')\n[完整需求文档](https://example.com/spec)\n\n## 技术方案\n- **接口与数据结构**\n```js\nconst sample_name = "<img src=x onerror=alert(1)>";\nconsole.log(sample_name);\n```\n\n| A | B |\n| --- | --- |\n| 1 | 2 |\n\n- [x] 已完成评审';
+  await host.tool('manage_notes',{action:'update',id:host.notes[0].id,revision:1,title:'项目手册',content});
+  await page.locator('.nb-list-actions').getByRole('button',{name:'刷新',exact:true}).click();
+  const card=page.getByRole('button',{name:'打开笔记 · 项目手册',exact:true});await expect(card).toBeVisible();
+  await expect(page.locator('.nb-categories').getByRole('button',{name:'管理分类',exact:true})).toHaveCount(0);
+  await expect(page.getByRole('searchbox',{name:'按标签筛选',exact:true})).toHaveCount(0);
+  await expect(card.locator('.nb-card-markdown')).toHaveAttribute('data-card-preview-state','ready');
+  await expect(card.locator('.nb-note-excerpt h2')).toHaveText(['项目资料','技术方案']);
+  await expect(card.locator('.nb-card-link')).toHaveText(['交互设计稿','完整需求文档']);
+  await expect(card.locator('pre code')).toContainText('sample_name');
+  await expect(card.locator('.katex')).toHaveCount(2);await expect(card.locator('pre code .hljs-keyword')).toHaveText('const');
+  await expect(card.locator('table')).toHaveCount(1);
+  expect(await card.evaluate(element=>parseFloat(getComputedStyle(element.querySelector('h2')).fontSize)<=parseFloat(getComputedStyle(element.querySelector('.nb-note-row-title')).fontSize))).toBe(true);
+  expect(await card.locator('.nb-note-row-main').evaluate(element=>element.scrollWidth<=element.clientWidth+1)).toBe(true);
+  await expect(card.locator('.nb-note-excerpt a, .nb-note-excerpt img, .nb-note-excerpt input, .nb-note-excerpt button')).toHaveCount(0);
+  await assertReadableSurface(page,theme);await assertContained(page);await capture(page,`structured-card-${theme}-${width}`);
+  await page.getByRole('button',{name:'列表视图',exact:true}).click();await expect(card).toBeVisible();await assertContained(page);
+  await card.click();await expect(page.locator('.nb-title-input')).toHaveValue('项目手册');expect(await sourceRaw(page)).toBe(content);expect(errors).toEqual([]);
+ }finally{await page.evaluate(()=>window.__disposeFixture?.()).catch(()=>{});await host.close();}
 });
 
 test('collection sections and category navigation preserve page records', async ({page}) => {

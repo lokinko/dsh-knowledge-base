@@ -27,6 +27,7 @@ const parameters = {
       description: 'Required calendar date for journal; returns the existing active journal for that date or creates one.' },
     versionId: { type: 'string', minLength: 1, maxLength: 64, description: 'Required for version and restore_version; obtain from versions.' },
     query: { type: 'string', maxLength: 200000, description: 'List search across title, Markdown and tags; case-insensitive.' },
+    excerptLength: { type: 'integer', minimum: 0, maximum: 1600, default: 160, description: 'Maximum Markdown excerpt length per list item; the library requests a longer bounded preview.' },
     tag: { type: 'string', minLength: 1, maxLength: 40, description: 'Exact tag filter for list.' },
     pinnedOnly: { type: 'boolean', description: 'List pinned notes only; defaults to false.' },
     trashed: { type: 'boolean', description: 'List trash instead of active notes; defaults to false.' },

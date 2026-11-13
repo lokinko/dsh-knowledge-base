@@ -95,6 +95,17 @@ test('list searches title/content/tags, filters, counts, pagination and determin
   assert.equal((await f.run({ action: 'list', offset: 100 })).notes.length, 0);
 });
 
+test('library can request bounded longer excerpts without changing directory defaults or stored note bytes',async()=>{
+ const f=fixture(),content='# Long note\r\n'+('正文与链接 https://example.com/source\r\n'.repeat(100));
+ const note=await create(f,{content});const writes=f.notes.writes;
+ assert.equal((await f.run({action:'list'})).notes[0].excerpt,content.slice(0,160));
+ const listed=(await f.run({action:'list',excerptLength:1600})).notes[0];
+ assert.equal(listed.excerpt,content.slice(0,1600));assert.equal('content' in listed,false);
+ assert.equal((await f.run({action:'list',excerptLength:0})).notes[0].excerpt,'');
+ for(const excerptLength of [-1,1601,1.5])await assert.rejects(f.run({action:'list',excerptLength}));
+ assert.equal((await full(f,note.id)).content,content);assert.equal(f.notes.writes,writes);
+});
+
 test('multi-MB Markdown preserves whitespace, CRLF and Unicode through storage and history restore', async () => {
   const f = fixture();
   const segment = '  # 标题 😀\r\n\r\n```js\r\n  let x = 1;  \r\n```\r\n\t\r\n';

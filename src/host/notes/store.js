@@ -9,9 +9,9 @@ const noteOrder = (a, b) => Number(b.pinned) - Number(a.pinned) ||
   Date.parse(b.updatedAt) - Date.parse(a.updatedAt) || compareText(a.id, b.id);
 const versionOrder = (a, b) => Date.parse(b.savedAt) - Date.parse(a.savedAt) ||
   b.revision - a.revision || compareText(a.versionId, b.versionId);
-function metadata(note) {
+function metadata(note, excerptLength = 160) {
   const { content, ...rest } = note;
-  return { ...rest, excerpt: content.slice(0, 160), contentLength: content.length };
+  return { ...rest, excerpt: content.slice(0, excerptLength), contentLength: content.length };
 }
 function versionMetadata(version) {
   return { versionId: version.versionId, noteId: version.noteId, title: version.title,
@@ -148,7 +148,7 @@ export class NotesStore {
         (!input.tag || note.tags.includes(input.tag)) && (!input.pinnedOnly || note.pinned) &&
         (!query || [note.title, note.content, ...note.tags].some(value => value.toLowerCase().includes(query))))
         .sort(noteOrder);
-      return { ok: true, notes: matching.slice(input.offset, input.offset + input.limit).map(note=>metadata({...note,category:resolve(note.category)})),
+      return { ok: true, notes: matching.slice(input.offset, input.offset + input.limit).map(note=>metadata({...note,category:resolve(note.category)},input.excerptLength)),
         total: matching.length, offset: input.offset, limit: input.limit, counts };
     }
     if (action === 'create' || action === 'journal') {
