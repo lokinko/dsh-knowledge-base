@@ -64,7 +64,7 @@ const commands={
  bold:view=>wrap(view,'**'),italic:view=>wrap(view,'*'),link,
  heading:view=>linePrefix(view,'heading'),orderedList:view=>linePrefix(view,'ordered'),
  bulletList:view=>linePrefix(view,'bullet'),taskList:view=>linePrefix(view,'task'),codeBlock,
- code:codeBlock,heading2:view=>linePrefix(view,'heading'),quote:view=>linePrefix(view,'quote'),
+ code:codeBlock,math:view=>wrap(view,'$', '$','x^2'),heading2:view=>linePrefix(view,'heading'),quote:view=>linePrefix(view,'quote'),
  undo,redo,indent:indentMore,outdent:indentLess,search:openSearchPanel,
  findNext,findPrevious,continueList:insertNewlineContinueMarkup
 };

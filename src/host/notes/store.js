@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { noteSchema, noteVersionSchema, noteActionSchema as actionSchema, editableShape, noteTimeSchema as isoSchema } from './schema.js';
 export { noteSchema, noteVersionSchema } from './schema.js';
 
-import { defaultCategoryTree } from '../categories/schema.js';
+import { defaultCategoryTree,categoryResolver } from '../categories/schema.js';
 const clone = value => structuredClone(value);
 const compareText = (a, b) => a < b ? -1 : a > b ? 1 : 0;
 const noteOrder = (a, b) => Number(b.pinned) - Number(a.pinned) ||
@@ -59,7 +59,8 @@ export class NotesStore {
    * just like execute(), and does not coordinate external table writers.
    */
   searchSnapshot() {
-    const work = this.queue.then(() => tableValues(this.notesTable, noteSchema));
+    const tree=this.categories?this.categories.snapshot():Promise.resolve(defaultCategoryTree());tree.catch(()=>{});
+    const work = this.queue.then(async()=>{const resolve=categoryResolver(await tree);return (await tableValues(this.notesTable,noteSchema)).map(note=>({...note,category:resolve(note.category)}));});
     this.queue = work.catch(() => {});
     return work;
   }
@@ -114,13 +115,15 @@ export class NotesStore {
 
   async perform(input, tree) {
     const { action } = input;
+    const resolve=categoryResolver(tree);
+    if(input.category!==undefined)input.category=resolve(input.category);
     const byId = new Map(tree.items.map(item => [item.id, item]));
     const requireCategory = id => {
       if (!byId.has(id)) throw failure('NOT_FOUND', 'Category not found');
     };
     const lineage = id => {
       const result = [];
-      let item = byId.get(id);
+      let item = byId.get(resolve(id));
       while (item) { result.push(item.id); item = byId.get(item.parentId); }
       return result;
     };
@@ -134,33 +137,35 @@ export class NotesStore {
         else {
           counts.all++;
           // Unknown UUIDs in imported/history records remain readable.
-          // There is no category deletion, so normal writes always have a lineage.
+          // Deleted IDs resolve through the category tree without rewriting notes.
           for (const id of lineage(note.category)) counts[id]++;
         }
       }
       const query = input.query?.toLowerCase();
       const matching = all.filter(note => Boolean(note.trashedAt) === input.trashed &&
         (!input.category || (input.includeDescendants ? lineage(note.category).includes(input.category) ||
-          note.category === input.category : note.category === input.category)) &&
+          resolve(note.category) === input.category : resolve(note.category) === input.category)) &&
         (!input.tag || note.tags.includes(input.tag)) && (!input.pinnedOnly || note.pinned) &&
         (!query || [note.title, note.content, ...note.tags].some(value => value.toLowerCase().includes(query))))
         .sort(noteOrder);
-      return { ok: true, notes: matching.slice(input.offset, input.offset + input.limit).map(metadata),
+      return { ok: true, notes: matching.slice(input.offset, input.offset + input.limit).map(note=>metadata({...note,category:resolve(note.category)})),
         total: matching.length, offset: input.offset, limit: input.limit, counts };
     }
     if (action === 'create' || action === 'journal') {
       if (action === 'journal') {
         const existing = (await tableValues(this.notesTable, noteSchema)).filter(note =>
-          !note.trashedAt && note.category === 'journal' && note.journalDate === input.date).sort(noteOrder)[0];
-        if (existing) return { ok: true, note: metadata(existing) };
+          !note.trashedAt && resolve(note.category) === resolve('journal') && note.journalDate === input.date).sort(noteOrder)[0];
+        if (existing) return { ok: true, note: metadata({...existing,category:resolve(existing.category)}) };
       }
       const now = this.now();
       const fields = action === 'journal'
         ? { title: input.date, content: `# ${input.date}\n\n`, category: 'journal', journalDate: input.date }
         : Object.fromEntries(Object.keys(editableShape).filter(key => input[key] !== undefined).map(key => [key, input[key]]));
+      fields.category=resolve(fields.category??'document');
       return this.save(noteSchema.parse({ ...fields, id: randomUUID(), createdAt: now, updatedAt: now, revision: 1 }));
     }
     const note = await this.note(input.id, input.revision);
+    note.category=resolve(note.category);
     if (action === 'get') return { ok: true, note };
     if (action === 'versions') {
       const history = await this.history(note.id);

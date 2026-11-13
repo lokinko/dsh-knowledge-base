@@ -100,7 +100,10 @@ export class RawSourceMap{
    this.root=merge(merge(left,inserted),shift(right,delta));
    this.length+=delta;
   }
-  this.raw=pieces.join('');
+  // Keep the common one-range edit as a string concatenation. Array.join forces
+  // a flat copy of a large note on every key; the engine can share unchanged
+  // string branches here until a consumer actually needs a flat representation.
+  this.raw=edits.length===1?pieces[0]+pieces[1]+pieces[2]:pieces.join('');
   // Do not retain another complete text copy after initialization.
   this.normalized=null;
   return this.raw;

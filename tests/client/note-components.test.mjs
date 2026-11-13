@@ -30,7 +30,7 @@ test('extracted editor preserves raw source and delegates outline navigation to 
  let tree=app.render(NoteEditor,props);
  const field=nodes(tree).find(node=>node.type===deps.MarkdownField);
  assert.equal(field.props.value,note.content);
- assert.equal(field.props.autoGrow,false);
+ assert.equal(field.props.label,'nbContent');
  const received=[];
  field.props.fieldRef.current={revealHeading:async heading=>{received.push(heading);return true;}};
  nodes(tree).find(node=>node.type===deps.Button&&node.props.label==='nbOutlineShow').props.onClick();
@@ -48,7 +48,7 @@ test('workspace creates stable editor and history component types during factory
  const app=harness(),deps=dependencies(app),tree={id:'categories',revision:0,items:[]};
  Object.assign(deps,{
   useCategories:()=>({tree,flattened:[],categoryLabel:value=>value}),
-  CategoryNavigation(){},CategoryManager(){},DirectoryPanel(){},CommandMenu(){},ShortcutHelp(){},NoteSettings(){},NoteLibraryCard(){},CoauthorPanel(){},localCalendar:()=>'',
+  CategoryManager(){},DirectoryPanel(){},CommandMenu(){},ShortcutHelp(){},NoteSettings(){},NoteLibraryCard(){},CoauthorPanel(){},localCalendar:()=>'',
   notesRequest:async input=>{assert.equal(input.action,'get');return {note};}
  });
  const exported=createNotesUI(deps);

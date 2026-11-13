@@ -14,7 +14,8 @@ import sql from 'highlight.js/lib/languages/sql';
 import cpp from 'highlight.js/lib/languages/cpp';
 import markdown from 'highlight.js/lib/languages/markdown';
 for(const [name,language] of Object.entries({javascript,typescript,python,json,bash,xml,css,yaml,sql,cpp,markdown}))hljs.registerLanguage(name,language);
-const md=new MarkdownIt({html:false,breaks:true,linkify:true,typographer:false,highlight(code,language){const lang=language.toLowerCase();if(lang&&hljs.getLanguage(lang)){try{return hljs.highlight(code,{language:lang,ignoreIllegals:true}).value;}catch{}}return '';}});
+export function highlightCode(code,language){const lang=language.trim().split(/\s+/,1)[0].toLowerCase();if(lang&&hljs.getLanguage(lang)){try{return hljs.highlight(code,{language:lang,ignoreIllegals:true}).value;}catch{}}return '';}
+const md=new MarkdownIt({html:false,breaks:true,linkify:true,typographer:false,highlight:highlightCode});
 md.use(texmath,{engine:katex,delimiters:['dollars','brackets'],katexOptions:{throwOnError:false,trust:false,strict:'ignore',maxExpand:1000,maxSize:20,output:'htmlAndMathml'}});
 md.core.ruler.after('inline','todo-task-lists',state=>{
  const source=state.env.rawSource??state.src,lines=source.split(/\r\n|\r|\n/),offsets=[0];

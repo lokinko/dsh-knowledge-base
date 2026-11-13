@@ -32,7 +32,21 @@
     "nbStorageInvalidDirectory": "目录不可用。请输入运行应用的电脑上的有效绝对路径。",
     "nbStorageDirectoryBusy": "目录正被使用或无法接收这批笔记数据。请查看下方详细信息后重试。",
     "nbStorageConflict": "存储位置已在其他地方更改。已更新当前位置信息，请核对输入的目标路径后再次保存。",
-    "nbStorageApplyUnconfirmed": "暂时无法确认位置更改的结果。应用可能仍在处理，请刷新当前存储位置并确认后再重试。"
+    "nbStorageApplyUnconfirmed": "暂时无法确认位置更改的结果。应用可能仍在处理，请刷新当前存储位置并确认后再重试。",
+    "nbStorageChooseFolder": "选择文件夹",
+    "nbStorageBrowseHint": "浏览运行 DeepSeek Harness 的电脑上的文件夹。选择后先填入路径，保存并切换后才会应用。",
+    "nbStorageBrowseAddress": "文件夹路径",
+    "nbStorageBrowseGo": "前往",
+    "nbStorageBrowseParent": "上一级",
+    "nbStorageBrowseLocations": "快捷位置",
+    "nbStorageBrowseHome": "个人目录",
+    "nbStorageBrowseFolders": "子文件夹",
+    "nbStorageBrowseEmpty": "此目录下没有子文件夹。",
+    "nbStorageBrowseMore": "加载更多文件夹",
+    "nbStorageBrowseSelect": "选择当前文件夹",
+    "nbStorageBrowseError": "无法读取文件夹，请检查路径或访问权限。",
+    "nbStorageHostUnavailable": "笔记服务尚未就绪。请确认插件已启用，且资料目录未被其他实例占用。",
+    "nbStorageBrowseCancel": "取消"
   },
   "en": {
     "nbStorageTitle": "Note storage location",
@@ -67,6 +81,20 @@
     "nbStorageInvalidDirectory": "This directory is unavailable. Enter a valid absolute path on the computer running the application.",
     "nbStorageDirectoryBusy": "The directory is in use or cannot receive this notebook data. Review the details below before trying again.",
     "nbStorageConflict": "The storage location changed elsewhere. Current location information has been updated; review your target path and save again.",
-    "nbStorageApplyUnconfirmed": "The outcome of the location change could not be confirmed. The application may still be processing it; refresh the current location and confirm it before retrying."
+    "nbStorageApplyUnconfirmed": "The outcome of the location change could not be confirmed. The application may still be processing it; refresh the current location and confirm it before retrying.",
+    "nbStorageChooseFolder": "Choose folder",
+    "nbStorageBrowseHint": "Browse folders on the computer running DeepSeek Harness. Selecting a folder fills the path; use Save and switch to apply it.",
+    "nbStorageBrowseAddress": "Folder path",
+    "nbStorageBrowseGo": "Go",
+    "nbStorageBrowseParent": "Up",
+    "nbStorageBrowseLocations": "Quick locations",
+    "nbStorageBrowseHome": "Home directory",
+    "nbStorageBrowseFolders": "Subfolders",
+    "nbStorageBrowseEmpty": "This folder has no subfolders.",
+    "nbStorageBrowseMore": "Load more folders",
+    "nbStorageBrowseSelect": "Select current folder",
+    "nbStorageBrowseError": "The folder could not be read. Check its path and access permissions.",
+    "nbStorageHostUnavailable": "The notebook service is unavailable. Check that the plugin is enabled and the data directory is not in use by another instance.",
+    "nbStorageBrowseCancel": "Cancel"
   }
 }

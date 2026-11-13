@@ -95,6 +95,7 @@ function panelRunner(extra={}){
   useMemo(fn,deps){const i=cursor++;if(!slots[i]||!equal(slots[i].deps,deps))slots[i]={deps,value:fn()};return slots[i].value;},
   useEffect(fn,deps){const i=cursor++;if(!slots[i]||!equal(slots[i].deps,deps)){const previous=slots[i];slots[i]={deps,cleanup:previous?.cleanup};effects.push(()=>{slots[i].cleanup?.();slots[i].cleanup=fn();});}},
   useId(){const i=cursor++;return 'directory-'+i;},
+  useLayoutEffect(fn,deps){return R.useEffect(fn,deps);},
  };
  const h=(type,props,...children)=>({type,props:props||{},children:children.flat(Infinity).filter(child=>child!==false&&child!==null&&child!==undefined)});
  const {DirectoryPanel}=createDirectoryNavigation({R,h,t:key=>key,Icon:()=>null,Button:()=>null});

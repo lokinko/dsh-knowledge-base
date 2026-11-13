@@ -1,6 +1,5 @@
 {
   "zh": {
-    "wbSplit": "分屏",
     "wbFormatting": "Markdown 格式",
     "wbBold": "粗体",
     "wbItalic": "斜体",
@@ -26,8 +25,6 @@
     "wbDirectoryTab": "目录",
     "wbNewNote": "新建笔记",
     "wbSearchNotes": "搜索笔记",
-    "wbTogglePreview": "切换编辑与预览",
-    "wbToggleSplit": "分屏编辑与预览",
     "wbToggleOutline": "显示或收起文档目录",
     "wbToggleFocus": "切换专注模式",
     "wbFindInDocument": "文档内查找与替换",
@@ -37,10 +34,12 @@
     "wbIndent": "缩进 / 取消缩进",
     "wbSlash": "行首插入菜单",
     "wbWriting": "写作",
-    "wbOutlineError": "暂时无法生成文档目录。"
+    "wbOutlineError": "暂时无法生成文档目录。",
+    "wbMath": "公式",
+    "wbTable": "表格",
+    "wbImage": "图片"
   },
   "en": {
-    "wbSplit": "Split",
     "wbFormatting": "Markdown formatting",
     "wbBold": "Bold",
     "wbItalic": "Italic",
@@ -66,8 +65,6 @@
     "wbDirectoryTab": "Folders",
     "wbNewNote": "New note",
     "wbSearchNotes": "Search notes",
-    "wbTogglePreview": "Toggle editing and preview",
-    "wbToggleSplit": "Edit and preview side by side",
     "wbToggleOutline": "Toggle document outline",
     "wbToggleFocus": "Toggle focus mode",
     "wbFindInDocument": "Find and replace in document",
@@ -77,6 +74,9 @@
     "wbIndent": "Indent / outdent",
     "wbSlash": "Insert menu at line start",
     "wbWriting": "Writing",
-    "wbOutlineError": "The document outline could not be generated."
+    "wbOutlineError": "The document outline could not be generated.",
+    "wbMath": "Formula",
+    "wbTable": "Table",
+    "wbImage": "Image"
   }
 }

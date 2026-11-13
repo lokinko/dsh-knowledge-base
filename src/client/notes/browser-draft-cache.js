@@ -1,9 +1,18 @@
 import {NoteDraftCache} from './legacy-draft-cache.js';
+import {createIndexedDBDraftDriver,createWorkerDraftDriver,newerDraft} from './idb-draft-driver.js';
+
+export {createIndexedDBDraftDriver} from './idb-draft-driver.js';
 import {NOTE_DRAFT_PREFIX as PREFIX,normalizeNoteFields,validateDraftIdentity,noteDraftKey,decodeLegacyDraft,cloneDraftRecord} from './draft-record.js';
 
-const DATABASE='dsh-note-drafts',STORE='drafts',CHANNEL='dsh-note-drafts.v2';
+const CHANNEL='dsh-note-drafts.v2';
+const WORKER_SOURCE=typeof __NOTE_DRAFT_WORKER_SOURCE__==='string'?__NOTE_DRAFT_WORKER_SOURCE__:'';
+
+/** Prefer the inline Worker driver; keep the main-thread driver as fallback. */
+export function createDraftDriver({indexedDBGetter=()=>globalThis.indexedDB,workerSource=WORKER_SOURCE}={}){
+ const local=()=>createIndexedDBDraftDriver({indexedDBGetter});
+ return workerSource&&typeof Worker==='function'?createWorkerDraftDriver({workerSource,fallback:local}):local();
+}
 const message=error=>error?.message||String(error);
-const newer=(a,b)=>!b||a.updatedAt>b.updatedAt||(a.updatedAt===b.updatedAt&&a.raw>=b.raw);
 function validStored(value){
  try{
   if(!value||value.version!==2||typeof value.raw!=='string'||!value.raw.startsWith('v2:'))return null;
@@ -13,56 +22,6 @@ function validStored(value){
  }catch{return null;}
 }
 
-/** All reads/checks/writes in commit execute in one IDB readwrite transaction. */
-export function createIndexedDBDraftDriver({indexedDBGetter=()=>globalThis.indexedDB,databaseName=DATABASE}={}){
- return new Promise((resolve,reject)=>{
-  let request,settled=false;
-  try{const indexedDB=indexedDBGetter();if(!indexedDB)throw new Error('IndexedDB is unavailable');request=indexedDB.open(databaseName,1);}catch(error){reject(error);return;}
-  request.onupgradeneeded=()=>{const db=request.result;if(!db.objectStoreNames.contains(STORE))db.createObjectStore(STORE,{keyPath:'key'});};
-  request.onerror=()=>{settled=true;reject(request.error||new Error('Cannot open draft database'));};
-  request.onblocked=()=>{settled=true;reject(new Error('Draft database upgrade is blocked by another window'));};
-  request.onsuccess=()=>{
-   const db=request.result;
-   if(settled){db.close();return;}
-   db.onversionchange=()=>db.close();
-   const read=(key,all=false)=>new Promise((yes,no)=>{
-    let tx,operation,result;
-    try{tx=db.transaction(STORE,'readonly');operation=all?tx.objectStore(STORE).getAll():tx.objectStore(STORE).get(key);}catch(error){no(error);return;}
-    operation.onsuccess=()=>{result=operation.result;};
-    tx.oncomplete=()=>yes(result);
-    tx.onabort=()=>no(tx.error||operation.error||new Error('Draft read failed'));
-    tx.onerror=()=>{};
-   });
-   resolve({load:()=>read(null,true),get:key=>read(key),close:()=>db.close(),commit:operations=>new Promise((yes,no)=>{
-    let tx;const outcomes=[];
-    try{
-     // Chromium honors strict durability; transaction completion is the boundary.
-     try{tx=db.transaction(STORE,'readwrite',{durability:'strict'});}catch{tx=db.transaction(STORE,'readwrite');}
-     const store=tx.objectStore(STORE);
-     for(const operation of operations){
-      const get=store.get(operation.key||operation.record.key);
-      get.onsuccess=()=>{
-       const existing=get.result;
-       if(operation.type==='remove'){
-        const removed=!existing||existing.raw===operation.raw;
-        if(existing&&removed)store.delete(operation.key);
-        outcomes.push({type:'remove',key:operation.key,raw:operation.raw,accepted:removed});
-       }else{
-        const accepted=newer(operation.record,existing);
-        if(accepted)store.put(operation.record);
-        outcomes.push({type:'put',key:operation.record.key,raw:operation.record.raw,accepted});
-       }
-      };
-     }
-    }catch(error){try{tx?.abort();}catch{}no(error);return;}
-    tx.oncomplete=()=>yes(outcomes);
-    tx.onabort=()=>no(tx.error||new Error('Draft transaction failed'));
-    tx.onerror=()=>{};
-   })});
-  };
- });
-}
-
 /**
  * Browser cache: writes synchronously enter memory, then coalesce into IDB.
  * No pending write is described as durable. The legacy cache stays unchanged.
@@ -70,7 +29,7 @@ export function createIndexedDBDraftDriver({indexedDBGetter=()=>globalThis.index
  */
 export class BrowserNoteDraftCache{
  constructor({storageGetter=()=>globalThis.localStorage,indexedDBGetter=()=>globalThis.indexedDB,
-  driverFactory=()=>createIndexedDBDraftDriver({indexedDBGetter}),delay=30,setTimer=setTimeout,clearTimer=clearTimeout,
+  driverFactory=()=>createDraftDriver({indexedDBGetter}),delay=30,setTimer=setTimeout,clearTimer=clearTimeout,
   tokenFactory=()=>globalThis.crypto.randomUUID(),channelFactory=()=>typeof window!=='undefined'&&typeof BroadcastChannel==='function'?new BroadcastChannel(CHANNEL):null,
   eventTarget=typeof window!=='undefined'?window:null}={}){
   if(!Number.isFinite(delay)||delay<0)throw new TypeError('Invalid persistence delay');
@@ -111,7 +70,7 @@ export class BrowserNoteDraftCache{
   const local=this._memory.get(record.key);
   // Local input accepted during initialization must never be replaced by a read.
   if(local?.volatile||this._puts.has(record.key)||local?.legacyRaw===record.raw)return;
-  if(newer(record,local)){this._memory.set(record.key,record);this._lastWriteTime=Math.max(this._lastWriteTime,Date.parse(record.updatedAt));}
+  if(newerDraft(record,local)){this._memory.set(record.key,record);this._lastWriteTime=Math.max(this._lastWriteTime,Date.parse(record.updatedAt));}
  }
  records(){
   if(this.initializationError&&!this._memory.size)throw this.initializationError;

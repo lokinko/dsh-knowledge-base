@@ -138,14 +138,9 @@ test('ordinary write failure preserves the tree, and unmounted reads cannot upda
  assert.equal(runner.stateWrites,before);
 });
 
-test('navigation defaults to categories only and picker preserves an unknown saved category',()=>{
+test('picker preserves an unknown saved category',()=>{
  const runner=hookRunner(async()=>({tree:tree()}));runner.mount();
  const categories=runner.render();
- const nav=runner.components.CategoryNavigation({categories,value:'document',onChange(){}});
- const text=value=>value===null||value===undefined?'':typeof value==='object'?(Array.isArray(value)?value.map(text).join('|'):text(value.children)):String(value);
- assert(!text(nav).includes('translated:nbAll'));
- const withViews=runner.components.CategoryNavigation({categories,value:'all',onChange(){},includeViews:true});
- assert(text(withViews).includes('translated:nbAll'));
  const picker=runner.components.CategoryPicker({categories,value:'saved-custom-id',onChange(){},ariaLabel:'Select category'});
  assert.equal(picker.props.disabled,true);
  assert.equal(picker.props['aria-label'],'Select category');

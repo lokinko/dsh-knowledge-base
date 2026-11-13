@@ -30,7 +30,15 @@
     "nbDirectoryUndo": "撤销上次分类移动",
     "nbDirectoryUndone": "已撤销分类移动。",
     "nbDirectoryUndoStale": "分类已有其他变更，无法撤销。正在刷新，请检查最新目录。",
-    "nbDirectoryOperationFailed": "操作未完成，已保留当前内容。"
+    "nbDirectoryOperationFailed": "操作未完成，已保留当前内容。",
+    "nbDirectoryCategoryActions": "分类操作",
+    "nbDirectoryDelete": "删除分类",
+    "nbDirectoryDeleteConfirm": "确认删除分类",
+    "nbDirectoryDeleteHint": "笔记将保留并归入「{category}」，子分类提升到上一级。此操作不会删除笔记或附件。",
+    "nbDirectoryDeleted": "分类已删除，笔记已保留。",
+    "nbDirectoryKeepCategory": "至少保留一个分类用于收纳笔记。",
+    "nbDirectoryDeleteFlushFailed": "当前笔记未能保存，请先处理保存问题后再删除分类。",
+    "nbDirectoryDeleteRefreshFailed": "分类已删除，笔记已保留；请刷新以查看最新目录。"
   },
   "en": {
     "nbDirectoryTitle": "Directory",
@@ -63,6 +71,14 @@
     "nbDirectoryUndo": "Undo last category move",
     "nbDirectoryUndone": "Category move undone.",
     "nbDirectoryUndoStale": "Categories have changed again. Undo is unavailable. Refreshing the latest directory.",
-    "nbDirectoryOperationFailed": "The operation did not complete. Your current content is preserved."
+    "nbDirectoryOperationFailed": "The operation did not complete. Your current content is preserved.",
+    "nbDirectoryCategoryActions": "Category actions",
+    "nbDirectoryDelete": "Delete category",
+    "nbDirectoryDeleteConfirm": "Confirm category deletion",
+    "nbDirectoryDeleteHint": "Notes will be kept in “{category}”. Child categories move up one level. Notes and attachments will be preserved.",
+    "nbDirectoryDeleted": "Category deleted. Notes have been preserved.",
+    "nbDirectoryKeepCategory": "Keep at least one category for your notes.",
+    "nbDirectoryDeleteFlushFailed": "The current note could not be saved. Resolve its save problem before deleting the category.",
+    "nbDirectoryDeleteRefreshFailed": "The category was deleted and notes were preserved. Refresh to see the latest directory."
   }
 }

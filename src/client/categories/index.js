@@ -1,4 +1,4 @@
-import {BUILTIN_CATEGORIES,initialCategoryTree,categoryChildren,flattenCategories,isCategoryDescendant,categoryDropMove,categoryRowPosition} from './tree.js';
+import {BUILTIN_CATEGORIES,initialCategoryTree,categoryChildren,flattenCategories,isCategoryDescendant,categoryDropMove,categoryRowPosition,resolveCategoryId} from './tree.js';
 
 export function createCategoriesUI({R,h,t,Icon,Button,notebookRequest,noteCategoryKey}){
  const endpoint='/api/dsh-note/categories';
@@ -18,9 +18,9 @@ export function createCategoriesUI({R,h,t,Icon,Button,notebookRequest,noteCatego
   R.useEffect(()=>{alive.current=true;void refresh();return()=>{alive.current=false;generation.current++;};},[refresh]);
   const mutate=R.useCallback(async(action,input={})=>{
    if(writing.current||!alive.current||!loaded.current)return null;
-   if(!['create','update','move'].includes(action))throw new TypeError('Unsupported category action');
+   if(!['create','update','move','delete'].includes(action))throw new TypeError('Unsupported category action');
    writing.current=true;const token=++generation.current;setBusy(true);setLoading(false);setError(null);
-   try{const response=await notebookRequest(endpoint,{...input,action,revision:current.current.revision});if(!alive.current||token!==generation.current)return null;accept(response.tree);return response.tree;}
+   try{const response=await notebookRequest(endpoint,{...input,action,revision:input.revision??current.current.revision});if(!alive.current||token!==generation.current)return null;accept(response.tree);return response.tree;}
    catch(cause){
     if(!alive.current||token!==generation.current)return null;
     if(cause?.code==='CONFLICT'){
@@ -32,7 +32,7 @@ export function createCategoriesUI({R,h,t,Icon,Button,notebookRequest,noteCatego
   },[]);
   // Locale bindings are stable functions; recompute labels on each parent locale render.
   const flattened=flattenCategories(tree,itemLabel);
-  const categoryLabel=id=>flattened.find(item=>item.id===id)?.label||viewLabel(id);
+  const categoryLabel=id=>flattened.find(item=>item.id===resolveCategoryId(tree,id))?.label||viewLabel(id);
   return {tree,loading,busy,error,ready,refresh,mutate,categoryLabel,flattened};
  }
  function CategoryError({categories}){
@@ -46,21 +46,6 @@ export function createCategoriesUI({R,h,t,Icon,Button,notebookRequest,noteCatego
    value&&!options.some(item=>item.id===value)&&!['all','trash'].includes(value)&&option(value,categories.categoryLabel(value)),
    ...options.map(item=>option(item.id,'\u00a0\u00a0'.repeat(item.depth)+item.label+(item.depth?' · '+item.path:''))),
    includeViews&&option('trash',viewLabel('trash')));
- }
- function CategoryNavigation({categories,value,onChange,counts={},onManage,disabled=false,className='',includeViews=false}){
-  const [collapsed,setCollapsed]=R.useState(()=>new Set());
-  const locked=disabled||categories.busy;
-  function toggle(id){setCollapsed(previous=>{const next=new Set(previous);next.has(id)?next.delete(id):next.add(id);return next;});}
-  function row(id,label,depth=0,children=[]){
-   const open=!collapsed.has(id),active=value===id;
-   return h('li',{key:id,className:'nb-cat-nav-item'},h('div',{className:'nb-cat-nav-row',style:{'--nb-cat-depth':depth}},
-    children.length?h('button',{type:'button',className:'nb-cat-toggle',disabled:locked,'aria-label':t(open?'nbCatCollapse':'nbCatExpand')+' '+label,'aria-expanded':open,onClick:()=>toggle(id)},h(Icon,{name:'chevron',size:13})):h('span',{className:'nb-cat-toggle-space'}),
-    h('button',{type:'button',className:'nb-nav-item nb-cat-nav-button'+(active?' is-active active':''),'aria-current':active?'page':undefined,disabled:locked,onClick:()=>onChange?.(id)},h('span',null,label),counts[id]!==undefined&&h('small',null,counts[id]))),
-    children.length&&open?h('ul',{className:'nb-cat-nav-children'},...children.map(item=>row(item.id,itemLabel(item),depth+1,categoryChildren(categories.tree,item.id)))):null);
-  }
-  return h('div',{className:'nb-category-navigation '+className},h('nav',{'aria-label':t('nbCategory')},h('ul',{className:'nb-cat-nav-list'},includeViews&&row('all',viewLabel('all')),...categoryChildren(categories.tree).map(item=>row(item.id,itemLabel(item),0,categoryChildren(categories.tree,item.id))),includeViews&&row('trash',viewLabel('trash')))),
-   categories.loading&&h('p',{className:'nb-cat-status',role:'status'},t('loading')),h(CategoryError,{categories}),
-   h('button',{type:'button',className:'nb-nav-item nb-cat-manage',disabled:locked,onClick:onManage},h(Icon,{name:'folder',size:15}),t('nbCatManage')));
  }
  function CategoryManager({categories,onClose}){
   const dialog=R.useRef(null),previousFocus=R.useRef(null),dragId=R.useRef(null),latest=R.useRef(categories);latest.current=categories;
@@ -121,5 +106,5 @@ export function createCategoriesUI({R,h,t,Icon,Button,notebookRequest,noteCatego
        h('div',{className:'nb-cat-order-buttons'},h('button',{type:'button',className:'em-btn btn',disabled:locked||siblingIndex<=0,onClick:()=>moveSibling(-1)},t('nbCatMoveUp')),h('button',{type:'button',className:'em-btn btn',disabled:locked||siblingIndex<0||siblingIndex>=siblings.length-1,onClick:()=>moveSibling(1)},t('nbCatMoveDown')))),h('p',{className:'nb-cat-help'},t('nbCatKeyboardHint'))):h('p',{className:'nb-cat-help'},t('nbCatSelectHint')))),
    h('footer',{className:'nb-cat-footer'},h('span',{role:'status','aria-live':'polite'},categories.busy?t('saving'):notice),h('button',{type:'button',className:'em-btn btn',disabled:categories.busy,onClick:close},t('close'))));
  }
- return {useCategories,CategoryNavigation,CategoryPicker,CategoryManager};
+ return {useCategories,CategoryPicker,CategoryManager};
 }

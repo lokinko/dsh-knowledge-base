@@ -1,5 +1,10 @@
+import {browseDirectories} from './directories.js';
 export const noteStorageToolParameters={type:'object',properties:{action:{type:'string',enum:['status','check','set']},directory:{type:'string',description:'Absolute folder on the DSH host for check/set. Empty string selects default storage. Data uses its dsh-notebook subfolder.'},revision:{type:'integer',minimum:0,maximum:Number.MAX_SAFE_INTEGER,description:'Current storage revision from status; required for set.'}},required:['action'],additionalProperties:false};
 export function registerNoteStorage(ctx,storage){
+ ctx.effect(()=>ctx.connection.fetch.register({path:'/api/dsh-note/note-storage-directories',methods:['POST'],requestBody:'buffered',async fetch(request){
+  try{return Response.json(await browseDirectories(JSON.parse(await request.text())),{headers:{'Cache-Control':'no-store'}});}
+  catch(error){return Response.json({ok:false,code:error.code||'INVALID_REQUEST',error:error instanceof Error?error.message:String(error)},{status:error.code==='DIRECTORY_ACCESS_DENIED'?403:400,headers:{'Cache-Control':'no-store'}});}
+ }}));
  ctx.effect(()=>ctx.connection.fetch.register({path:'/api/dsh-note/note-storage',methods:['GET','POST'],requestBody:'buffered',async fetch(request){
   try{const input=request.method==='GET'?{action:'status'}:JSON.parse(await request.text());return Response.json(await storage.execute(input),{headers:{'Cache-Control':'no-store'}});}
   catch(error){const code=typeof error?.code==='string'?error.code:'INVALID_REQUEST';return Response.json({ok:false,code,error:error instanceof Error?error.message:String(error)},{status:['CONFLICT','DIRECTORY_BUSY','LOCKED','FOREIGN_LIBRARY'].includes(code)?409:400,headers:{'Cache-Control':'no-store'}});}

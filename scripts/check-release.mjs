@@ -33,7 +33,10 @@ for (const [file, side] of [
 ]) {
   const meta = JSON.parse(await read(file));
   assertModuleBoundaries(meta.metafile || meta, side);
-  if (side === 'client') assertModuleBoundaries(meta.renderWorker.metafile, side);
+  if (side === 'client') {
+    assertModuleBoundaries(meta.renderWorker.metafile, side);
+    assertModuleBoundaries(meta.draftWorker.metafile, side);
+  }
 }
 for (const lang of ['en', 'zh']) {
   const locale = JSON.parse(await read('locale/' + lang + '.json'));

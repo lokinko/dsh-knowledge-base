@@ -57,7 +57,7 @@ test('empty, end-of-file, CR-only lines and full outlines preserve navigation in
  assert.ok(renderMarkdown(source,{headingPrefix:'all'}).includes('id="all-299"'));
 });
 
-test('field and standalone preview pass heading prefixes through without changing source',()=>{
+test('live field preserves source while standalone previews retain heading anchors',()=>{
  const sources=[];
  const h=(type,props,...children)=>{if(type?.name==='SourceEditor')sources.push(props.value);return React.createElement(type,props,...children);};
  const {MarkdownField,MarkdownPreview}=createMarkdownField({R:React,h,t:key=>key});
@@ -66,11 +66,10 @@ test('field and standalone preview pass heading prefixes through without changin
  assert.ok(preview.includes('<h1 id="preview-0">Same</h1>'));
  assert.ok(preview.includes('<h1 id="preview-1">Same</h1>'));
  const field=renderToStaticMarkup(h(MarkdownField,{value,label:'Document',headingPrefix:'field',autoGrow:false}));
- assert.ok(field.includes('<h1 id="field-1">Same</h1>'));
+ assert.ok(field.includes('is-live'));
+ assert.ok(!field.includes('em-md-modes'));
  assert.ok(field.includes('class="nb-source-editor"'));
  assert.equal(sources.at(-1),value);
- const initialEdit=renderToStaticMarkup(h(MarkdownField,{value,label:'Document',headingPrefix:'edit',autoGrow:false,startEditing:true}));
- assert.ok(!initialEdit.includes('<h1'));
 });
 
 function outlineHarness(){

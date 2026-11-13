@@ -1,10 +1,10 @@
 const categoryId = { type: 'string', description: 'Builtin document/reading/code/journal ID or custom category UUID.' };
 const parameters = {
   type: 'object', properties: {
-    action: { type: 'string', enum: ['list', 'create', 'update', 'move'] },
+    action: { type: 'string', enum: ['list', 'create', 'update', 'move','delete'] },
     revision: { type: 'integer', minimum: 0, maximum: Number.MAX_SAFE_INTEGER,
       description: 'Current tree revision, required for every write; obtain from list.' },
-    id: { ...categoryId, description: 'Category ID required for update and move.' },
+    id: { ...categoryId, description: 'Category ID required for update, move and delete.' },
     name: { type: 'string', maxLength: 80, description: 'Name for create or update. Empty resets a builtin label to its translated default.' },
     parentId: { anyOf: [categoryId, { type: 'null' }], description: 'Destination parent; null or omitted means root.' },
     beforeId: { anyOf: [categoryId, { type: 'null' }], description: 'Move before this destination sibling; null or omitted appends.' },
@@ -29,7 +29,7 @@ export function registerCategories(ctx, store) {
     },
   }));
   ctx.effect(() => ctx.tools.register({ name: 'manage_note_categories',
-    description: 'List, create, rename and move note categories. Moves support hierarchy and sibling ordering, up to 8 levels. Writes require the current tree revision; category IDs remain stable.',
+    description: 'List, create, rename, move and delete note categories. Deletion preserves notes, assigns them to the parent or first remaining root, and promotes child categories. Keep at least one category. Moves support up to 8 levels. Writes require the current tree revision.',
     parameters,
     output: { schema: { type: 'object', properties: { ok: { type: 'boolean' } }, required: ['ok'] },
       render(_args, value) { return [{ type: 'text', text: JSON.stringify(value) }]; } },

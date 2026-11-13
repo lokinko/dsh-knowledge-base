@@ -54,12 +54,13 @@ async function sourcesIn(directory) {
 
 test('all production sources belong to an acyclic Host, Client or Worker graph', async () => {
   const base = {absWorkingDir: root, bundle: true, write: false, metafile: true};
-  const [host, client, worker] = await Promise.all([
+  const [host, client, worker, draftWorker] = await Promise.all([
     build({...base, entryPoints: ['src/host/index.js'], platform: 'node', format: 'esm', packages: 'external', target: 'node22'}),
     build({...base, entryPoints: ['src/client/index.js'], platform: 'browser', format: 'iife', loader: {'.css': 'text'}}),
     build({...base, entryPoints: ['src/client/markdown/render-worker.js'], platform: 'browser', format: 'iife'}),
+    build({...base, entryPoints: ['src/client/notes/draft-worker.js'], platform: 'browser', format: 'iife'}),
   ]);
-  for (const name of ['draft-record', 'legacy-draft-cache', 'browser-draft-cache']) {
+  for (const name of ['draft-record', 'legacy-draft-cache', 'idb-draft-driver', 'browser-draft-cache']) {
     const input = client.metafile.inputs['src/client/notes/' + name + '.js'];
     assert.ok(input, 'Missing draft layer: ' + name);
     assert.ok(input.imports.every(dependency => !/\/(?:edit-session|services|ui|editor|history)\.js$/.test(dependency.path)),
@@ -69,6 +70,7 @@ test('all production sources belong to an acyclic Host, Client or Worker graph',
     ...assertModuleBoundaries(host.metafile, 'host'),
     ...assertModuleBoundaries(client.metafile, 'client'),
     ...assertModuleBoundaries(worker.metafile, 'client'),
+    ...assertModuleBoundaries(draftWorker.metafile, 'client'),
   ]);
   const orphaned = (await sourcesIn('src')).filter(name => !used.has(name));
   assert.deepEqual(orphaned, [], 'Remove unused production files or connect them to their entry point');

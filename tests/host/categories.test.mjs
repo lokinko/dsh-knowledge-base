@@ -28,6 +28,43 @@ async function write(store, fields) {
 }
 const code = expected => error => error.code === expected;
 
+test('deleting a parent preserves exact notes/history and promotes children in sibling order',async()=>{
+ const f=fixture(),parent=await create(f.categories,'Work'),removed=await create(f.categories,'Project',parent.id),child=await create(f.categories,'Detail',removed.id);
+ const raw='# Keep\r\nbody\nend\r';
+ const note=(await f.store.execute({action:'create',category:removed.id,content:raw})).note;
+ await f.store.execute({action:'checkpoint',id:note.id,revision:note.revision});
+ const beforeNotes=structuredClone([...f.notes.records]),beforeVersions=structuredClone([...f.versions.records]);
+ await write(f.categories,{action:'delete',id:removed.id});const next=await tree(f.categories);
+ assert.equal(next.items.some(item=>item.id===removed.id),false);assert.equal(next.items.find(item=>item.id===child.id).parentId,parent.id);
+ assert.deepEqual(next.redirects,[{id:removed.id,targetId:parent.id}]);assert.deepEqual([...f.notes.records],beforeNotes);assert.deepEqual([...f.versions.records],beforeVersions);
+ const current=(await f.store.execute({action:'get',id:note.id})).note;assert.equal(current.category,parent.id);assert.equal(current.content,raw);assert.equal(current.revision,note.revision);
+ const listed=await f.store.execute({action:'list',category:parent.id,includeDescendants:false});assert.equal(listed.total,1);assert.equal(listed.counts[parent.id],1);assert.equal(listed.notes[0].category,parent.id);
+ assert.equal((await f.store.searchSnapshot())[0].category,parent.id);
+ const reopened=new NotesStore(f.notes,f.versions,undefined,{categories:new CategoryStore(f.table)});assert.equal((await reopened.execute({action:'get',id:note.id})).note.category,parent.id);
+ await reopened.execute({action:'update',id:note.id,revision:note.revision,category:removed.id,content:raw+'edited'});
+ assert.equal((await reopened.execute({action:'get',id:note.id})).note.category,parent.id);
+});
+
+test('builtin deletion redirects old and new notes, compacts redirect chains, and protects the last category',async()=>{
+ const f=fixture();const old=(await f.store.execute({action:'create',category:'reading',content:'keep'})).note;
+ for(const id of ['reading','document','code'])await write(f.categories,{action:'delete',id});
+ const next=await tree(f.categories);assert.deepEqual(next.items.map(item=>item.id),['journal']);assert.ok(next.redirects.every(item=>item.targetId==='journal'));assert.equal(categoryTreeSchema.safeParse(next).success,true);
+ assert.equal((await f.store.execute({action:'get',id:old.id})).note.category,'journal');
+ assert.equal((await f.store.execute({action:'create'})).note.category,'journal');
+ assert.equal((await f.store.execute({action:'create',category:'reading'})).note.category,'journal');
+ const before=await tree(f.categories);await assert.rejects(write(f.categories,{action:'delete',id:'journal'}),code('LAST_CATEGORY'));assert.deepEqual(await tree(f.categories),before);
+ assert.equal(f.notes.records.get(old.id).category,'reading');
+});
+
+test('deletion is CAS protected and persistence failures or sibling name collisions preserve the tree',async()=>{
+ const f=fixture(),parent=await create(f.categories,'Work'),removed=await create(f.categories,'Project',parent.id);
+ await create(f.categories,'Clash',parent.id);await create(f.categories,'Clash',removed.id);const before=await tree(f.categories);
+ await assert.rejects(write(f.categories,{action:'delete',id:removed.id}),/Duplicate sibling/);assert.deepEqual(await tree(f.categories),before);
+ await assert.rejects(f.categories.execute({action:'delete',id:'reading',revision:0}),code('CONFLICT'));
+ f.table.fail=true;await assert.rejects(write(f.categories,{action:'delete',id:'reading'}),/put failed/);f.table.fail=false;assert.deepEqual(await tree(f.categories),before);
+ await write(f.categories,{action:'delete',id:'reading'});assert.equal((await tree(f.categories)).revision,before.revision+1);
+});
+
 test('defaults are implicit, detached, compatible with both constructors, and strict persisted validation', async () => {
   const f = fixture();
   const defaults = await tree(f.categories);

@@ -1,5 +1,7 @@
 import {test, expect} from '@playwright/test';
 import fs from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {createFixtureHost} from './fixture-host.mjs';
 
@@ -41,13 +43,15 @@ async function openWorkspace(page, {theme = 'dark', language = 'zh', width = 144
 }
 const sourceContent = page => page.locator('.nb-source-editor .cm-content');
 const sourceEditor = page => page.locator('.nb-source-editor .cm-editor');
-async function sourceRaw(page) { return sourceEditor(page).evaluate(element => element.__noteEditorHandle.value); }
+// Draft replacement may briefly tear down the old view after it was located.
+// Polling callers wait for the newly mounted handle and its exact source.
+async function sourceRaw(page) { return sourceEditor(page).evaluate(element => element.__noteEditorHandle?.value); }
 async function sourceState(page) {
   return sourceEditor(page).evaluate(element => ({raw: element.__noteEditorHandle.value, selection: element.__noteEditorView.state.selection.main.head, length: element.__noteEditorView.state.doc.length}));
 }
 async function enterSource(page) {
-  await page.locator('.em-md-modes').getByRole('button', {name: '编辑', exact: true}).click();
   await expect(sourceContent(page)).toBeVisible();
+  await expect.poll(()=>sourceEditor(page).evaluate(element=>!!element.__noteEditorHandle)).toBe(true);
 }
 async function readDrafts(page) {
   return page.evaluate(() => new Promise((resolve, reject) => {
@@ -323,7 +327,7 @@ test('collection sections and category navigation preserve page records', async 
     await expect(page.locator('[data-section=recent] .nb-note-row')).toHaveCount(5);
     const width = await page.locator('.nb-note-row').first().evaluate(element => element.getBoundingClientRect().width);
     expect(width).toBeGreaterThanOrEqual(300);
-    await page.locator('.nb-categories .nb-cat-nav-button').filter({hasText: '阅读笔记'}).click();
+    await page.locator('.nb-categories .nb-directory-folder').getByRole('button',{name:'阅读笔记',exact:true}).click();
     await expect(page.locator('.nb-note-row')).toHaveCount(2);
     await page.locator('.nb-categories').getByRole('button', {name: '全部笔记', exact: true}).click();
     await expect(page.locator('.nb-note-row')).toHaveCount(6);
@@ -348,15 +352,14 @@ test('focus mode and document outline navigate preview and raw CRLF source witho
     await expect(page.locator('.nb-document-outline')).toBeVisible();
     await expect(page.locator('.nb-outline-link')).toHaveCount(3);
     await page.locator('.nb-outline-link').getByText('最后的问题', {exact: true}).click();
-    await expect.poll(() => page.locator('.nb-document-stage').evaluate(element => element.scrollTop)).toBeGreaterThan(0);
-    await expect(page.locator('.em-markdown h2').filter({hasText: '最后的问题'})).toBeFocused();
+    await expect(sourceContent(page)).toBeFocused();
+    expect((await sourceState(page)).selection).toBe(content.slice(0, content.indexOf('## 最后的问题')).replace(/\r\n?/g, '\n').length);
     await capture(page, 'outline-long-document');
-    await page.locator('.em-md-modes').getByRole('button', {name: '编辑', exact: true}).click();
-    await page.locator('.nb-outline-link').getByText('第二节', {exact: true}).click();
+      await page.locator('.nb-outline-link').getByText('第二节', {exact: true}).click();
     const source = sourceContent(page);
     await expect(source).toBeFocused();
     expect((await sourceState(page)).selection).toBe(content.slice(0, content.indexOf('## 第二节')).replace(/\r\n?/g, '\n').length);
-    expect(await sourceEditor(page).locator('.cm-scroller').evaluate(element => element.scrollTop / element.scrollHeight)).toBeGreaterThan(.4);
+    expect(await page.locator('.nb-document-stage').evaluate(element => element.scrollTop / element.scrollHeight)).toBeGreaterThan(.4);
     expect(await sourceRaw(page)).toBe(content);
     expect((await host.tool('manage_notes', {action: 'get', id: host.notes[0].id})).note.content).toBe(content);
     const edited = content + '\r\n本地补充';
@@ -436,7 +439,7 @@ test('custom parent and child categories classify notes, rename safely and survi
     await page.keyboard.press('Escape');
     await expect(page.locator('.nb-note-row').filter({hasText: '让想法慢慢成形'})).toContainText('论文阅读');
     expect((await host.tool('manage_notes', {action: 'get', id: host.notes[0].id})).note.revision).toBe(assigned.revision);
-    await page.locator('.nb-sidebar-nav .nb-cat-nav-button').filter({hasText: /^研究/}).click();
+    await page.locator('.nb-sidebar-directory .nb-directory-folder').getByRole('button',{name:'研究',exact:true}).click();
     await expect(page.locator('.nb-note-row')).toHaveCount(1);
     await expect(page.locator('.nb-list-heading')).toContainText('研究');
     await page.evaluate(() => window.__disposeFixture?.());
@@ -444,13 +447,14 @@ test('custom parent and child categories classify notes, rename safely and survi
     await page.addScriptTag({path: root + '.build/browser-host.js'});
     await page.addScriptTag({path: root + 'client.js'});
     await expect(page.locator('.nb-note-row')).toHaveCount(6);
-    await expect(page.locator('.nb-category-navigation')).toContainText('论文阅读');
+    await page.locator('.nb-categories').getByRole('button',{name:'展开分类 研究',exact:true}).click();
+    await expect(page.locator('.nb-categories .nb-directory-panel')).toContainText('论文阅读');
     await expect(page.locator('.nb-note-row').filter({hasText: '让想法慢慢成形'})).toContainText('论文阅读');
     dialog = await categoryManager(page);
     const longName = '深度研究'.repeat(18);
     await addCategory(dialog, longName);
     await page.keyboard.press('Escape');
-    await page.locator('.nb-categories .nb-cat-nav-button').filter({hasText: longName}).click();
+    await page.locator('.nb-categories .nb-directory-folder').getByRole('button',{name:longName,exact:true}).click();
     await expect(page.locator('.nb-note-row')).toHaveCount(0);
     await page.locator('.nb-list-actions').getByRole('button', {name: '新建笔记', exact: true}).click();
     await expect(page.locator('.nb-title-input')).toHaveValue('未命名笔记');
@@ -605,30 +609,28 @@ test('CodeMirror keeps raw mixed newlines, view identity, native search and slas
     // Playwright send key='z' with shiftKey=true, which CM treats as Ctrl+Z.
     await page.keyboard.press('Control+Shift+Z');
     await expect.poll(() => sourceRaw(page)).toBe(completed);
-    await page.locator('.em-md-modes').getByRole('button', {name: '分屏', exact: true}).click();
+    await expect(page.locator('.em-md-modes')).toHaveCount(0);
     await expect(sourceContent(page)).toBeVisible();
-    await expect(page.locator('.nb-preview-pane')).toBeVisible();
+    await expect(page.locator('.nb-preview-pane')).toHaveCount(0);
     await sourceContent(page).focus();await page.keyboard.press('Control+End');await page.keyboard.type('LIVE');
-    await expect(page.locator('.nb-preview-pane h2')).toHaveText('LIVE');
-    await expect(page.locator('.nb-preview-pane .em-markdown')).toHaveAttribute('data-md-preview-state', 'ready');
-    await page.locator('.nb-preview-pane input.task-list-item-checkbox').check();
+    await expect(page.locator('.nb-live-h2')).toHaveText('LIVE');
+    await page.locator('.nb-source-editor input.task-list-item-checkbox').check();
     await expect.poll(() => sourceRaw(page)).toBe((completed + 'LIVE').replace('- [ ] 原始任务', '- [x] 原始任务'));
     expect(await sourceEditor(page).evaluate(element => element === window.__originalSourceDOM)).toBe(true);
     const live = completed + 'LIVE', checked = live.replace('- [ ] 原始任务', '- [x] 原始任务');
     await expect(sourceContent(page)).not.toBeFocused();
-    await expect(page.locator('.nb-preview-pane :focus')).toHaveCount(1);
+    await expect(page.locator('.nb-source-editor input.task-list-item-checkbox')).toBeFocused();
     await page.keyboard.press('Control+z');
     await expect.poll(() => sourceRaw(page)).toBe(live);
-    await expect(sourceContent(page)).toBeFocused();
-    await expect(page.locator('.nb-preview-pane input.task-list-item-checkbox')).not.toBeChecked();
+    await expect(page.locator('.nb-source-editor input.task-list-item-checkbox')).toBeFocused();
+    await expect(page.locator('.nb-source-editor input.task-list-item-checkbox')).not.toBeChecked();
     await page.keyboard.press('Control+Shift+Z');
     await expect.poll(() => sourceRaw(page)).toBe(checked);
     await page.keyboard.press('Control+z');await page.keyboard.press('Control+z');
     await expect.poll(() => sourceRaw(page)).toBe(completed);
     await page.keyboard.press('Control+Shift+Z');await page.keyboard.press('Control+Shift+Z');
     await expect.poll(() => sourceRaw(page)).toBe(checked);
-    await expect(page.locator('.nb-preview-pane .em-markdown')).toHaveAttribute('data-md-preview-state', 'ready');
-    await expect(page.locator('.nb-preview-pane input.task-list-item-checkbox')).toBeChecked();
+    await expect(page.locator('.nb-source-editor input.task-list-item-checkbox')).toBeChecked();
     expect(await sourceEditor(page).evaluate(element => element === window.__originalSourceDOM)).toBe(true);
     await capture(page, 'codemirror-source');
     expect(errors).toEqual([]);
@@ -659,7 +661,8 @@ test('workspace shortcuts capture app commands and exclude native conversation a
     await page.locator('.nb-title-input').focus();
     await page.keyboard.press('Control+Shift+p');
     await expect(commands).toBeVisible();
-    await commands.getByRole('searchbox').fill('切换编辑与预览');
+    await expect(commands.getByRole('option').filter({hasText: '切换编辑与预览'})).toHaveCount(0);
+    await commands.getByRole('searchbox').fill('文档内查找与替换');
     await commands.getByRole('searchbox').press('Enter');
     await expect(sourceContent(page)).toBeVisible();
     await sourceContent(page).focus();
@@ -690,7 +693,7 @@ test('workspace shortcuts capture app commands and exclude native conversation a
     await expect.poll(async () => (await host.tool('manage_notes', {action: 'get', id: host.notes[3].id})).note.content).toBe(edited);
     await sourceContent(page).focus();
     await page.keyboard.press('Control+e');
-    await expect(page.locator('.nb-writing-field')).toHaveClass(/is-preview/);
+    await expect(page.locator('.nb-writing-field')).toHaveClass(/is-live/);
     await page.locator('.nb-title-input').focus();
     await page.keyboard.press('Control+e');
     await expect(sourceContent(page)).toBeVisible();
@@ -704,6 +707,38 @@ test('workspace shortcuts capture app commands and exclude native conversation a
     await expect(native).toHaveValue('native draft');
     expect(errors).toEqual([]);
   } finally { await page.evaluate(() => window.__disposeFixture?.()).catch(() => {}); await host.close(); }
+});
+
+test('library sidebar reuses the directory for categories, note opening, dragging and deletion',async({page})=>{
+ const {host,errors}=await openWorkspace(page,{width:915,height:789,chatOpen:false});
+ try{
+  const panel=page.locator('.nb-directory-panel');
+  await expect(panel).toHaveCount(1);await expect(page.locator('.nb-categories .nb-directory-panel')).toBeVisible();
+  await expect(page.locator('.nb-category-navigation')).toHaveCount(0);
+  await panel.getByRole('button',{name:'文档',exact:true}).click();
+  await expect(page.locator('.nb-list-heading')).toContainText('文档');await expect(page.locator('.nb-note-row')).toHaveCount(2);
+  await expect(panel.locator('.nb-directory-file')).toHaveCount(2);
+  await panel.getByRole('button',{name:'分类操作 文档',exact:true}).click();
+  await panel.getByRole('menuitem',{name:'新增子分类',exact:true}).click();
+  await panel.locator('.nb-directory-form input').fill('共享目录子分类');
+  await panel.locator('.nb-directory-form').getByRole('button',{name:'保存',exact:true}).click();
+  const child=(await categoryTree(host)).items.find(item=>item.name==='共享目录子分类');
+  const reading=panel.locator('.nb-directory-folder').filter({has:page.getByRole('button',{name:'阅读笔记',exact:true})});
+  await panel.getByRole('button',{name:'拖动分类 共享目录子分类',exact:true}).dragTo(reading,{targetPosition:{x:95,y:16}});
+  await expect.poll(async()=>(await categoryTree(host)).items.find(item=>item.id===child.id).parentId).toBe('reading');
+  await expect(panel.getByRole('button',{name:'折叠分类 阅读笔记',exact:true})).toBeVisible();
+  await panel.getByRole('button',{name:'分类操作 共享目录子分类',exact:true}).click();
+  await panel.getByRole('menuitem',{name:'删除分类',exact:true}).click();
+  await page.getByRole('dialog',{name:'删除分类 · 共享目录子分类',exact:true}).getByRole('button',{name:'确认删除分类',exact:true}).click();
+  await expect(panel.getByRole('button',{name:'分类操作 共享目录子分类',exact:true})).toHaveCount(0);
+  await panel.locator('.nb-directory-file').getByRole('button',{name:'让想法慢慢成形',exact:true}).click();
+  await expect(page.locator('.nb-title-input')).toHaveValue('让想法慢慢成形');await expect(panel).toHaveCount(1);
+  await expect(panel.getByRole('button',{name:'折叠分类 阅读笔记',exact:true})).toBeVisible();
+  await page.getByRole('button',{name:'返回列表',exact:true}).click();
+  await expect(page.locator('.nb-categories .nb-directory-panel')).toBeVisible();await expect(panel).toHaveCount(1);
+  await expect(panel.getByRole('button',{name:'折叠分类 阅读笔记',exact:true})).toBeVisible();
+  await capture(page,'library-shared-directory');await assertContained(page);expect(errors).toEqual([]);
+ }finally{await page.evaluate(()=>window.__disposeFixture?.()).catch(()=>{});await host.close();}
 });
 
 test('directory lazy loading, note/category dragging, guarded undo and mobile navigation retain the editor', async ({page}) => {
@@ -727,7 +762,8 @@ test('directory lazy loading, note/category dragging, guarded undo and mobile na
     await addRoot('验收项目');await addRoot('验收归档');
     const first = (await categoryTree(host)).items.find(item => item.name === '验收项目');
     const second = (await categoryTree(host)).items.find(item => item.name === '验收归档');
-    await panel.getByRole('button', {name: '新增子分类 验收项目', exact: true}).click();
+    await panel.getByRole('button', {name: '分类操作 验收项目', exact: true}).click();
+    await panel.getByRole('menuitem', {name: '新增子分类', exact: true}).click();
     await panel.locator('.nb-directory-form input').fill('验收子项');
     await panel.locator('.nb-directory-form').getByRole('button', {name: '保存', exact: true}).click();
     await expect(panel.locator('.nb-directory-title').filter({hasText: '验收子项'})).toBeVisible();
@@ -1049,4 +1085,186 @@ test('English, reduced motion and filter-free surfaces retain layout', async ({p
     await expect(page.locator(':focus')).toBeVisible();
     expect(errors).toEqual([]);
   } finally { await page.evaluate(() => window.__disposeFixture?.()).catch(() => {}); await host.close(); }
+});
+
+for (const theme of ['dark','light']) test(theme + ': live document renders and edits math, code, tables and images without modes', async ({page}) => {
+ const {host,errors}=await openWorkspace(page,{theme,chatOpen:false,height:1400});
+ await page.route('https://notebook.test/api/dsh-note/attachment-file?id=fixture',route=>route.fulfill({contentType:'image/svg+xml',body:'<svg xmlns="http://www.w3.org/2000/svg" width="320" height="72"><rect width="320" height="72" rx="8" fill="#334155"/><text x="20" y="43" fill="#e2e8f0" font-family="sans-serif">Live image</text></svg>'}));
+ try {
+  const raw=['# 即时文稿','','**粗体** 与 *斜体* 和 [链接](https://example.com)','','行内 $x^2$。','','$$','\\frac{a}{b}','$$','','```js','const answer = 42;','```','','- [ ] 保留任务','','| A | B |','| --- | --- |','| 1 | 2 |','','![test](/api/dsh-note/attachment-file?id=fixture)','','结束'].join('\r\n');
+  await host.tool('manage_notes',{action:'update',id:host.notes[0].id,revision:1,content:raw});
+  await page.locator('.nb-note-row').filter({hasText:'让想法慢慢成形'}).click();
+  await expect(page.locator('.em-md-modes')).toHaveCount(0);
+  await expect(page.locator('.nb-preview-pane')).toHaveCount(0);
+  await expect(sourceContent(page)).toBeVisible();
+  expect(errors).toEqual([]);
+  expect(await sourceRaw(page)).toBe(raw);
+  await sourceEditor(page).evaluate((element,offset)=>element.__noteEditorHandle.revealOffset(offset),raw.indexOf('行内'));
+  await expect(page.locator('.nb-source-editor .katex')).toHaveCount(2);
+  await expect(page.locator('.nb-live-strong')).toHaveText('粗体');
+  await expect(page.locator('.nb-live-code .hljs-keyword')).toContainText('const');
+  await expect(page.locator('.nb-source-editor table')).toBeVisible();
+  await expect(page.locator('.nb-source-editor img[alt=test]')).toHaveAttribute('src','/api/dsh-note/attachment-file?id=fixture');
+  expect(await sourceRaw(page)).toBe(raw);
+  const inline=page.locator('.nb-live-math').filter({has:page.locator('.katex')}).first();
+  await inline.getByRole('button',{name:'公式',exact:true}).click();
+  const input=inline.getByRole('textbox',{name:'公式',exact:true});
+  await expect(input).toBeFocused();
+  await input.fill('y^3');
+  await expect.poll(()=>sourceRaw(page)).toBe(raw.replace('$x^2$','$y^3$'));
+  await expect(inline.locator('.katex annotation')).toHaveText('y^3');
+  await expect(input).toBeFocused();
+  await input.press('Control+z');
+  await expect.poll(()=>sourceRaw(page)).toBe(raw);
+  await sourceContent(page).focus();await page.keyboard.press('Control+End');await page.keyboard.insertText(' 新输入 $z^4$');
+  await expect(page.locator('.nb-source-editor .katex')).toHaveCount(3);
+  const changed=raw+' 新输入 $z^4$';
+  await expect.poll(()=>sourceRaw(page)).toBe(changed);
+  await expect.poll(async()=>(await host.tool('manage_notes',{action:'get',id:host.notes[0].id})).note.content).toBe(changed);
+  await page.locator('.nb-title-input').focus();
+  await capture(page,'live-document-'+theme);
+  await sourceContent(page).focus();await page.keyboard.press('Control+End');await page.keyboard.insertText(' ');
+  await page.locator('.nb-format-actions').getByRole('button',{name:'公式',exact:true}).click();
+  const inserted=page.locator('.nb-live-math-input:visible');
+  await expect(inserted).toBeFocused();await inserted.fill('a+b');
+  await expect.poll(()=>sourceRaw(page)).toBe(changed+' $a+b$');
+  await inserted.press('Enter');await expect(inserted).toHaveCount(0);
+  // Wide tables must scroll within the rendered block, without widening the
+  // editable document or preventing ordinary paragraphs from wrapping.
+  await sourceContent(page).focus();await page.keyboard.press('Control+End');
+  const wide='\n\n| '+Array(8).fill('Long_column_heading').join(' | ')+' |\n| '+Array(8).fill('---').join(' | ')+' |\n| '+Array(8).fill('wide_cell_content').join(' | ')+' |\n\n正文继续自然换行。';
+  await page.keyboard.insertText(wide);
+  await page.setViewportSize({width:890,height:789});
+  await expect.poll(()=>page.locator('.nb-document-stage').evaluate(element=>element.scrollWidth<=element.clientWidth+1)).toBe(true);
+  await expect.poll(()=>sourceContent(page).evaluate(element=>element.scrollWidth<=element.clientWidth+1)).toBe(true);
+  expect(errors).toEqual([]);
+ }finally{await page.evaluate(()=>window.__disposeFixture?.()).catch(()=>{});await host.close();}
+});
+
+test('live rendering preserves widget DOM during caret moves and commits composed widget edits without changing untouched newlines',async({page})=>{
+ const {host,errors}=await openWorkspace(page,{chatOpen:false,height:1200});
+ try{
+  const raw='# Live editing\r\n\r\nSelection stays smooth next to $x^2$.\n\n$$\r\n\\begin{aligned}\na&=1\\\\\rb&=2\r\n\\end{aligned}\n$$\r\n\r\n```js\nconst html = "<img src=x onerror=alert(1)>";\nconsole.log(html);\n```\n\n| A | B |\n| --- | --- |\n| 1 | 2 |\n\nEnd';
+  await host.tool('manage_notes',{action:'update',id:host.notes[0].id,revision:1,content:raw});
+  await page.locator('.nb-note-row').filter({hasText:'让想法慢慢成形'}).click();await enterSource(page);
+  await expect(page.locator('.nb-source-editor .katex')).toHaveCount(2);
+  await expect(page.locator('.nb-live-code .hljs-keyword')).toContainText('const');
+  await expect(page.locator('.nb-source-editor img[onerror]')).toHaveCount(0);
+  await sourceEditor(page).evaluate((element,at)=>element.__noteEditorHandle.revealOffset(at),raw.indexOf('Selection')+10);
+  await page.evaluate(()=>new Promise(requestAnimationFrame));
+  await sourceEditor(page).evaluate(element=>{
+   window.__liveStableNodes=[...element.querySelectorAll('.katex,table')];window.__liveRenderMutations=0;
+   window.__liveRenderObserver=new MutationObserver(changes=>{window.__liveRenderMutations+=changes.length;});
+   for(const node of element.querySelectorAll('.nb-live-math-result'))window.__liveRenderObserver.observe(node,{childList:true,subtree:true,characterData:true});
+  });
+  for(let i=0;i<15;i++){await page.keyboard.press('ArrowRight');await page.keyboard.press('ArrowLeft');}
+  expect(await sourceEditor(page).evaluate(element=>window.__liveStableNodes.every(node=>node.isConnected&&element.contains(node)))).toBe(true);
+  expect(await page.evaluate(()=>window.__liveRenderMutations)).toBe(0);expect(await sourceRaw(page)).toBe(raw);
+  await page.evaluate(()=>window.__liveRenderObserver.disconnect());
+  const block=page.locator('.nb-live-math-block').filter({has:page.locator('.katex')}).first();
+  await block.getByRole('button',{name:'公式',exact:true}).click();const input=block.getByRole('textbox',{name:'公式',exact:true});
+  const body=await input.inputValue();await input.fill(body.replace('b&=2','b&=3'));
+  await expect.poll(()=>sourceRaw(page)).toBe(raw.replace('b&=2','b&=3'));await input.press('Control+z');
+  await expect.poll(()=>sourceRaw(page)).toBe(raw);
+  await input.dispatchEvent('compositionstart');
+  await input.evaluate(element=>{element.value=element.value.replace('b&=2','b&=中文');element.dispatchEvent(new InputEvent('input',{bubbles:true,inputType:'insertCompositionText',isComposing:true}));});
+  expect(await sourceRaw(page)).toBe(raw);
+  await input.dispatchEvent('compositionend');
+  await expect.poll(()=>sourceRaw(page)).toBe(raw.replace('b&=2','b&=中文'));
+  await expect(input).toBeFocused();await input.press('Escape');await expect(input).toBeHidden();
+  await expect.poll(async()=>(await host.tool('manage_notes',{action:'get',id:host.notes[0].id})).note.content).toBe(raw.replace('b&=2','b&=中文'));
+  expect(errors).toEqual([]);
+ }finally{await page.evaluate(()=>window.__disposeFixture?.()).catch(()=>{});await host.close();}
+});
+
+for(const width of [933,390]) test('storage folder picker: browse, recover errors and choose without switching at '+width,async({page})=>{
+ const {host,errors}=await openWorkspace(page,{width,height:789});
+ const temp=await fs.mkdtemp(path.join(os.tmpdir(),'dsh-folder-picker-ui-'));
+  const selected=path.join(temp,'资料库 A');await fs.mkdir(selected);await fs.mkdir(path.join(temp,'空目录'));
+ try{
+  await page.locator(width<600?'.nb-list-actions':'.nb-category-foot').getByRole('button',{name:'设置',exact:true}).click();
+  const settings=page.locator('.nb-settings-dialog');
+  await settings.getByRole('button',{name:'笔记存储位置',exact:true}).click();
+  const input=settings.locator('.nb-storage-path');await expect(input).toBeEnabled();await input.fill(temp);
+  await settings.getByRole('button',{name:'选择文件夹',exact:true}).click();
+  const picker=settings.locator('.nb-folder-picker');await expect(picker.getByRole('button',{name:'资料库 A',exact:true})).toBeVisible();
+  await expect(picker.getByRole('textbox',{name:'文件夹路径',exact:true})).toBeFocused();
+  await picker.getByRole('button',{name:'资料库 A',exact:true}).click();
+  await expect(picker.getByRole('textbox',{name:'文件夹路径',exact:true})).toHaveValue(selected);
+  await expect(picker.getByText('此目录下没有子文件夹。',{exact:true})).toBeVisible();
+  await picker.getByRole('button',{name:'上一级',exact:true}).click();
+  await expect(picker.getByRole('button',{name:'空目录',exact:true})).toBeVisible();
+  const address=picker.getByRole('textbox',{name:'文件夹路径',exact:true});await address.fill(path.join(temp,'missing'));await address.press('Enter');
+  await expect(picker.getByRole('alert')).toContainText('无法读取文件夹');await expect(picker.getByRole('button',{name:'选择当前文件夹',exact:true})).toBeDisabled();
+  await address.fill(temp);await address.press('Enter');await expect(picker.getByRole('button',{name:'资料库 A',exact:true})).toBeVisible();
+  await picker.getByRole('button',{name:'资料库 A',exact:true}).click();await expect(address).toHaveValue(selected);
+  await picker.getByRole('button',{name:'选择当前文件夹',exact:true}).click();await expect(picker).toHaveCount(0);await expect(input).toHaveValue(selected);
+  const status=await host.api('note-storage',{action:'status'});expect(status.directory).toBe('');expect(status.revision).toBe(0);expect(status.counts.notes).toBe(6);
+  await settings.getByRole('button',{name:'选择文件夹',exact:true}).click();await expect(picker.getByRole('textbox',{name:'文件夹路径',exact:true})).toBeEnabled();
+  await picker.getByRole('textbox',{name:'文件夹路径',exact:true}).press('Escape');await expect(picker).toHaveCount(0);await expect(settings).toBeVisible();await expect(input).toHaveValue(selected);
+  await settings.getByRole('button',{name:'选择文件夹',exact:true}).click();await expect(picker.getByRole('textbox',{name:'文件夹路径',exact:true})).toBeEnabled();
+  await picker.getByRole('button',{name:'上一级',exact:true}).click();await expect(picker.getByRole('button',{name:'资料库 A',exact:true})).toBeVisible();
+  await capture(page,'storage-folder-picker-'+width);await assertContained(page);expect(errors).toEqual([]);
+ }finally{
+  await page.evaluate(()=>window.__disposeFixture?.()).catch(()=>{});await host.close();const target=path.resolve(temp);expect(path.dirname(target)).toBe(await fs.realpath(os.tmpdir()));expect(path.basename(target)).toMatch(/^dsh-folder-picker-ui-/);await fs.rm(target,{recursive:true,force:true});
+ }
+});
+
+test('storage unavailable displays a service error instead of a JSON parsing failure',async({page})=>{
+ const {host,errors}=await openWorkspace(page);
+ try{
+  await page.route('https://notebook.test/api/dsh-note/note-storage',route=>route.fulfill({status:404,contentType:'text/html',body:'Not found'}));
+  await page.locator('.nb-category-foot').getByRole('button',{name:'设置',exact:true}).click();
+  const settings=page.locator('.nb-settings-dialog');await settings.getByRole('button',{name:'笔记存储位置',exact:true}).click();
+  await expect(settings.locator('.nb-storage-current').getByRole('alert')).toContainText('笔记服务尚未就绪');
+  await expect(settings.getByRole('button',{name:'保存并切换',exact:true})).toBeDisabled();expect(errors).toEqual([]);
+ }finally{await page.evaluate(()=>window.__disposeFixture?.()).catch(()=>{});await host.close();}
+});
+
+for(const width of [933,390]) test('category actions add children and delete categories while preserving the editor at '+width,async({page})=>{
+ const {host,errors}=await openWorkspace(page,{width,height:789,chatOpen:false});
+ try{
+  await host.tool('manage_notes',{action:'update',id:host.notes[0].id,revision:1,category:'reading'});
+  await page.locator('.nb-note-row').filter({hasText:'让想法慢慢成形'}).click();await enterSource(page);
+  const raw=await sourceRaw(page);await sourceEditor(page).evaluate(element=>{window.__categoryMenuEditor=element;});
+  if(width<600)await page.locator('.nb-editor-head').getByRole('button',{name:'目录',exact:true}).click();
+  const panel=page.locator('.nb-directory-panel');
+  const actions=label=>panel.getByRole('button',{name:'分类操作 '+label,exact:true});
+  await actions('阅读笔记').click();const menu=panel.getByRole('menu',{name:'分类操作 阅读笔记',exact:true});
+  await expect(menu.getByRole('menuitem',{name:'新增子分类',exact:true})).toBeVisible();await expect(menu.getByRole('menuitem',{name:'删除分类',exact:true})).toBeEnabled();
+  async function expectAnchoredMenu(label){
+   const box=await panel.getByRole('menu').boundingBox(),anchor=await actions(label).boundingBox();
+   expect(box.x).toBeGreaterThanOrEqual(0);expect(box.x+box.width).toBeLessThanOrEqual(width+1);
+   expect(box.y).toBeGreaterThanOrEqual(0);expect(box.y+box.height).toBeLessThanOrEqual(790);
+   expect(Math.min(Math.abs(box.y-anchor.y-anchor.height-4),Math.abs(box.y+box.height-anchor.y+4))).toBeLessThan(2);
+  }
+  await expectAnchoredMenu('阅读笔记');
+  await menu.getByRole('menuitem',{name:'删除分类',exact:true}).click();const confirmation=page.getByRole('dialog',{name:'删除分类 · 阅读笔记',exact:true});
+  await expect(confirmation).toContainText('文档');await expect(confirmation.getByRole('button',{name:'取消',exact:true})).toBeFocused();
+  const revision=(await categoryTree(host)).revision;await confirmation.getByRole('button',{name:'取消',exact:true}).click();expect((await categoryTree(host)).revision).toBe(revision);
+  await expect(actions('阅读笔记')).toBeFocused();await actions('阅读笔记').click();await menu.getByRole('menuitem',{name:'新增子分类',exact:true}).click();
+  await panel.locator('.nb-directory-form input').fill('要删除的分类');await panel.locator('.nb-directory-form').getByRole('button',{name:'保存',exact:true}).click();
+  const created=(await categoryTree(host)).items.find(item=>item.name==='要删除的分类');
+  await actions('要删除的分类').click();await panel.getByRole('menuitem',{name:'新增子分类',exact:true}).click();
+  await panel.locator('.nb-directory-form input').fill('保留的子分类');await panel.locator('.nb-directory-form').getByRole('button',{name:'保存',exact:true}).click();
+  const seeded=await host.tool('manage_notes',{action:'create',category:created.id,title:'分类中的笔记',content:'keep\r\nexact'});
+  await actions('要删除的分类').click();await panel.getByRole('menuitem',{name:'删除分类',exact:true}).click();
+  await page.getByRole('dialog',{name:'删除分类 · 要删除的分类',exact:true}).getByRole('button',{name:'确认删除分类',exact:true}).click();
+  await expect(actions('要删除的分类')).toHaveCount(0);
+  expect((await categoryTree(host)).items.find(item=>item.name==='保留的子分类').parentId).toBe('reading');
+  expect((await host.tool('manage_notes',{action:'get',id:seeded.note.id})).note.category).toBe('reading');
+  const readingNotes=(await host.tool('manage_notes',{action:'list',category:'reading',includeDescendants:false})).notes;
+  await actions('阅读笔记').click();await panel.getByRole('menuitem',{name:'删除分类',exact:true}).click();
+  await page.getByRole('dialog',{name:'删除分类 · 阅读笔记',exact:true}).getByRole('button',{name:'确认删除分类',exact:true}).click();await expect(actions('阅读笔记')).toHaveCount(0);
+  for(const note of readingNotes)expect((await host.tool('manage_notes',{action:'get',id:note.id})).note.category).toBe('document');
+  if(width<600)await page.getByRole('button',{name:'返回正文',exact:true}).click();
+  expect(await sourceRaw(page)).toBe(raw);expect(await sourceEditor(page).evaluate(element=>element===window.__categoryMenuEditor)).toBe(true);
+  await sourceContent(page).focus();await page.keyboard.press('Control+End');await page.keyboard.insertText(' AFTER DELETE');
+  await expect.poll(async()=>(await host.tool('manage_notes',{action:'get',id:host.notes[0].id})).note.content).toBe(raw+' AFTER DELETE');
+  expect((await host.tool('manage_notes',{action:'get',id:host.notes[0].id})).note.category).toBe('document');
+  await page.locator('.nb-title-input').focus();await page.keyboard.press('Control+Shift+O');await page.keyboard.press('Control+Shift+O');
+  if(width<600)await page.locator('.nb-editor-head').getByRole('button',{name:'目录',exact:true}).click();
+  await actions('文档').click();await capture(page,'category-actions-'+width);
+  await expectAnchoredMenu('文档');expect(errors).toEqual([]);
+ }finally{await page.evaluate(()=>window.__disposeFixture?.()).catch(()=>{});await host.close();}
 });

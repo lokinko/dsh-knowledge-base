@@ -20,7 +20,10 @@ function validateTree(tree, ctx) {
   const issue = (message) => ctx.addIssue({ code: "custom", message });
   const byId = new Map(tree.items.map((item) => [item.id, item]));
   if (byId.size !== tree.items.length) issue("Duplicate category IDs");
-  for (const id of builtinCategories) if (!byId.has(id)) issue("Missing builtin category");
+  const redirects = new Map((tree.redirects || []).map((item) => [item.id, item.targetId]));
+  if (redirects.size !== (tree.redirects || []).length) issue("Duplicate deleted category IDs");
+  for (const [id, targetId] of redirects) if (byId.has(id) || !byId.has(targetId)) issue("Invalid deleted category redirect");
+  for (const id of builtinCategories) if (!byId.has(id) && !redirects.has(id)) issue("Missing builtin category");
   const names = /* @__PURE__ */ new Set();
   const orders = /* @__PURE__ */ new Map();
   for (const item of tree.items) {
@@ -58,8 +61,13 @@ function validateTree(tree, ctx) {
 var categoryTreeSchema = z.object({
   id: z.literal("categories"),
   revision: revisionSchema,
-  items: z.array(itemSchema).min(4).max(500)
+  items: z.array(itemSchema).min(1).max(500),
+  redirects: z.array(z.object({ id: categoryIdSchema, targetId: categoryIdSchema }).strict()).max(1e4).optional()
 }).strict().superRefine(validateTree);
+function categoryResolver(tree) {
+  const redirects = new Map((tree.redirects || []).map((item) => [item.id, item.targetId]));
+  return (id) => redirects.get(id) || id;
+}
 var defaultCategoryTree = () => ({
   id: "categories",
   revision: 0,
@@ -80,7 +88,8 @@ var actions = z.discriminatedUnion("action", [
     id: categoryIdSchema,
     parentId: categoryIdSchema.nullable().default(null),
     beforeId: categoryIdSchema.nullable().optional()
-  }).strict()
+  }).strict(),
+  z.object({ action: z.literal("delete"), revision: revisionSchema, id: categoryIdSchema }).strict()
 ]);
 
 // src/host/notes/schema.js
@@ -362,8 +371,8 @@ var AttachmentStore = class {
       if (!path.isAbsolute(request.filePath)) throw fail("INVALID_PATH", "Use an absolute file path on the DSH host");
       const resolved = await fs.realpath(request.filePath), handle = await fs.open(resolved, "r");
       try {
-        const stat = await handle.stat();
-        if (!stat.isFile()) throw fail("INVALID_PATH", "Expected a regular file");
+        const stat2 = await handle.stat();
+        if (!stat2.isFile()) throw fail("INVALID_PATH", "Expected a regular file");
         return await this.add({ ownerType: request.ownerType, ownerId: request.ownerId, name: request.name || path.basename(resolved), signal, data: handle.createReadStream({ autoClose: false, highWaterMark: 65536 }) });
       } finally {
         await handle.close();
@@ -554,9 +563,9 @@ var CHUNK = 64 * 1024;
 var failure = (message) => Object.assign(new Error(message), { code: "CORRUPT_ATTACHMENT" });
 var aborted = (signal) => signal?.throwIfAborted();
 async function regular(target, directory = false) {
-  const stat = await fs2.lstat(target);
-  if (stat.isSymbolicLink() || !(directory ? stat.isDirectory() : stat.isFile())) throw failure("Unsafe attachment storage path");
-  return stat;
+  const stat2 = await fs2.lstat(target);
+  if (stat2.isSymbolicLink() || !(directory ? stat2.isDirectory() : stat2.isFile())) throw failure("Unsafe attachment storage path");
+  return stat2;
 }
 async function syncDirectory(target) {
   let handle;
@@ -593,8 +602,8 @@ async function* fileData(target, signal) {
   await regular(target);
   const handle = await fs2.open(target, "r");
   try {
-    const stat = await handle.stat();
-    if (!stat.isFile()) throw failure("Unsafe attachment object");
+    const stat2 = await handle.stat();
+    if (!stat2.isFile()) throw failure("Unsafe attachment object");
     while (true) {
       aborted(signal);
       const buffer = Buffer.allocUnsafe(CHUNK);
@@ -620,8 +629,8 @@ var AttachmentStorage = class {
     await regular(root, true);
     await regular(path2.join(root, "blobs"), true);
     const hostPath = this.blobPath(root, row);
-    const stat = await regular(hostPath);
-    if (stat.size !== row.size) throw failure("Attachment byte length mismatch");
+    const stat2 = await regular(hostPath);
+    if (stat2.size !== row.size) throw failure("Attachment byte length mismatch");
     return { hostPath, data: verifiedAttachment(fileData(hostPath, signal), row, signal) };
   }
   nativeDescriptor(row, signal) {
@@ -707,13 +716,13 @@ var exists = async (target) => {
   }
 };
 async function plainDirectory(target) {
-  const stat = await exists(target);
-  if (!stat || stat.isSymbolicLink() || !stat.isDirectory()) throw fail2("INVALID_DIRECTORY", "Expected an existing real directory: " + target);
+  const stat2 = await exists(target);
+  if (!stat2 || stat2.isSymbolicLink() || !stat2.isDirectory()) throw fail2("INVALID_DIRECTORY", "Expected an existing real directory: " + target);
   return target;
 }
 async function plainFile(target) {
-  const stat = await exists(target);
-  if (!stat || stat.isSymbolicLink() || !stat.isFile()) throw fail2("CORRUPT_STORAGE", "Expected a regular managed file: " + target);
+  const stat2 = await exists(target);
+  if (!stat2 || stat2.isSymbolicLink() || !stat2.isFile()) throw fail2("CORRUPT_STORAGE", "Expected a regular managed file: " + target);
 }
 async function jsonFile(target) {
   await plainFile(target);
@@ -974,8 +983,8 @@ var NoteStorage = class {
             await this._secureActive();
             if (name === "note_categories" && this._active.missingCategories || name === "note_topics" && this._active.missingTopics) return;
             const file = this._recordPath(this._active, name, key);
-            const stat = await exists(file);
-            if (stat) {
+            const stat2 = await exists(file);
+            if (stat2) {
               await plainFile(file);
               await fs3.unlink(file);
               await syncDirectory2(path3.dirname(file));
@@ -1067,18 +1076,18 @@ var NoteStorage = class {
   async _managed(directory, libraryId, create) {
     await plainDirectory(directory);
     const root = path3.join(directory, MANAGED);
-    let stat = await exists(root);
+    let stat2 = await exists(root);
     let created = false;
-    if (!stat && create) {
+    if (!stat2 && create) {
       try {
         await fs3.mkdir(root, { mode: 448 });
         created = true;
       } catch (error) {
         if (error.code !== "EEXIST") throw error;
       }
-      stat = await exists(root);
+      stat2 = await exists(root);
     }
-    if (!stat) throw fail2("MISSING_STORAGE", "Configured managed notebook folder is missing");
+    if (!stat2) throw fail2("MISSING_STORAGE", "Configured managed notebook folder is missing");
     await plainDirectory(root);
     if (created) {
       await atomicJSON(path3.join(root, "library.json"), { format: FORMAT, version: 1, libraryId });
@@ -1408,9 +1417,57 @@ var NoteStorage = class {
   }
 };
 
+// src/host/storage/directories.js
+import * as fs4 from "node:fs/promises";
+import os from "node:os";
+import path4 from "node:path";
+var fail3 = (code, message) => Object.assign(new Error(message), { code });
+var PAGE_SIZE = 100;
+var absolute = (value) => typeof value === "string" && value.length <= 32768 && !value.includes("\0") && path4.isAbsolute(value) && (process.platform !== "win32" || /^(?:[A-Za-z]:[\\/]|[\\/]{2}[^\\/]+[\\/][^\\/]+(?:[\\/]|$))/.test(value));
+async function browseDirectories(input, { homeDirectory = os.homedir() } = {}) {
+  if (!input || typeof input !== "object" || Array.isArray(input) || Object.keys(input).some((key) => !["directory", "offset"].includes(key)) || input.directory !== void 0 && typeof input.directory !== "string" || input.offset !== void 0 && (!Number.isSafeInteger(input.offset) || input.offset < 0 || input.offset > 1e6)) throw fail3("INVALID_REQUEST", "Invalid directory browsing request");
+  const requested = input.directory || homeDirectory, offset = input.offset || 0;
+  if (!absolute(requested)) throw fail3("INVALID_DIRECTORY", "Choose an absolute directory on the computer running DSH");
+  try {
+    const directory = await fs4.realpath(requested), stat2 = await fs4.stat(directory);
+    if (!stat2.isDirectory()) throw fail3("INVALID_DIRECTORY", "The selected path is not a directory");
+    const entries = (await fs4.readdir(directory, { withFileTypes: true })).filter((entry) => entry.isDirectory() && !entry.isSymbolicLink()).sort((a, b) => a.name.localeCompare(b.name, "en", { numeric: true }));
+    const roots = process.platform === "win32" ? await Promise.all("ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("").map(async (letter) => {
+      const root = letter + ":\\";
+      try {
+        return (await fs4.stat(root)).isDirectory() ? root : null;
+      } catch {
+        return null;
+      }
+    })).then((values) => values.filter(Boolean)) : [path4.parse(directory).root];
+    const parent = path4.dirname(directory);
+    return {
+      ok: true,
+      directory,
+      parent: parent === directory ? null : parent,
+      home: homeDirectory,
+      roots,
+      entries: entries.slice(offset, offset + PAGE_SIZE).map((entry) => ({ name: entry.name, directory: path4.join(directory, entry.name) })),
+      offset,
+      hasMore: offset + PAGE_SIZE < entries.length
+    };
+  } catch (error) {
+    if (["EACCES", "EPERM"].includes(error.code)) throw fail3("DIRECTORY_ACCESS_DENIED", "The DSH service cannot read this directory. Check its access permissions.");
+    if (["ENOENT", "ENOTDIR"].includes(error.code)) throw fail3("INVALID_DIRECTORY", "This directory does not exist on the computer running DSH");
+    throw error;
+  }
+}
+
 // src/host/storage/host.js
 var noteStorageToolParameters = { type: "object", properties: { action: { type: "string", enum: ["status", "check", "set"] }, directory: { type: "string", description: "Absolute folder on the DSH host for check/set. Empty string selects default storage. Data uses its dsh-notebook subfolder." }, revision: { type: "integer", minimum: 0, maximum: Number.MAX_SAFE_INTEGER, description: "Current storage revision from status; required for set." } }, required: ["action"], additionalProperties: false };
 function registerNoteStorage(ctx, storage) {
+  ctx.effect(() => ctx.connection.fetch.register({ path: "/api/dsh-note/note-storage-directories", methods: ["POST"], requestBody: "buffered", async fetch(request) {
+    try {
+      return Response.json(await browseDirectories(JSON.parse(await request.text())), { headers: { "Cache-Control": "no-store" } });
+    } catch (error) {
+      return Response.json({ ok: false, code: error.code || "INVALID_REQUEST", error: error instanceof Error ? error.message : String(error) }, { status: error.code === "DIRECTORY_ACCESS_DENIED" ? 403 : 400, headers: { "Cache-Control": "no-store" } });
+    }
+  } }));
   ctx.effect(() => ctx.connection.fetch.register({ path: "/api/dsh-note/note-storage", methods: ["GET", "POST"], requestBody: "buffered", async fetch(request) {
     try {
       const input = request.method === "GET" ? { action: "status" } : JSON.parse(await request.text());
@@ -1430,12 +1487,12 @@ function registerNoteStorage(ctx, storage) {
 // src/host/search/context-search.js
 import { createHash as createHash4 } from "node:crypto";
 var SOURCES = ["note"];
-var fail3 = (code, message) => Object.assign(new Error(message), { code });
+var fail4 = (code, message) => Object.assign(new Error(message), { code });
 var hash = (text) => createHash4("sha256").update(text).digest("hex").slice(0, 24);
 var fold = (text) => String(text).normalize("NFKC").toLowerCase().replace(/ß/g, "ss").replace(/ς/g, "\u03C3");
 var integer = (value, fallback, max, name, min = 1) => {
   if (value === void 0) return fallback;
-  if (!Number.isSafeInteger(value) || value < min || value > max) throw fail3("INVALID_INPUT", `${name} must be ${min}\u2013${max}`);
+  if (!Number.isSafeInteger(value) || value < min || value > max) throw fail4("INVALID_INPUT", `${name} must be ${min}\u2013${max}`);
   return value;
 };
 function tokens(text) {
@@ -1497,11 +1554,11 @@ function chunks(text) {
 }
 var encode = (ref) => `ctx1:${encodeURIComponent(JSON.stringify(ref))}`;
 function decode(atomId) {
-  if (typeof atomId !== "string" || !atomId.startsWith("ctx1:") || atomId.length > 4e3) throw fail3("INVALID_INPUT", "Invalid atomId");
+  if (typeof atomId !== "string" || !atomId.startsWith("ctx1:") || atomId.length > 4e3) throw fail4("INVALID_INPUT", "Invalid atomId");
   try {
     return JSON.parse(decodeURIComponent(atomId.slice(5)));
   } catch {
-    throw fail3("INVALID_INPUT", "Invalid atomId");
+    throw fail4("INVALID_INPUT", "Invalid atomId");
   }
 }
 function metadata(record) {
@@ -1535,10 +1592,10 @@ function visible(atom, input) {
   return (!input.source || input.source === atom.ref.source) && (!input.documentId || input.documentId === atom.ref.id) && (input.includeTrashed === true || !atom.trashedAt);
 }
 function validateInput(input) {
-  if (!input || typeof input !== "object" || Array.isArray(input)) throw fail3("INVALID_INPUT", "Expected an object");
-  if (input.source !== void 0 && !SOURCES.includes(input.source)) throw fail3("INVALID_INPUT", "Invalid source");
-  if (input.documentId !== void 0 && (typeof input.documentId !== "string" || input.documentId.length > 200)) throw fail3("INVALID_INPUT", "Invalid documentId");
-  for (const key of ["includeTrashed"]) if (input[key] !== void 0 && typeof input[key] !== "boolean") throw fail3("INVALID_INPUT", `Invalid ${key}`);
+  if (!input || typeof input !== "object" || Array.isArray(input)) throw fail4("INVALID_INPUT", "Expected an object");
+  if (input.source !== void 0 && !SOURCES.includes(input.source)) throw fail4("INVALID_INPUT", "Invalid source");
+  if (input.documentId !== void 0 && (typeof input.documentId !== "string" || input.documentId.length > 200)) throw fail4("INVALID_INPUT", "Invalid documentId");
+  for (const key of ["includeTrashed"]) if (input[key] !== void 0 && typeof input[key] !== "boolean") throw fail4("INVALID_INPUT", `Invalid ${key}`);
 }
 var ContextSearch = class {
   constructor({ notes }) {
@@ -1553,7 +1610,7 @@ var ContextSearch = class {
       validateInput(request);
       if (request.action === "search") return this.search(request);
       if (request.action === "read") return this.read(request);
-      throw fail3("INVALID_INPUT", "Expected search or read action");
+      throw fail4("INVALID_INPUT", "Expected search or read action");
     });
     this.queue = work.catch(() => {
     });
@@ -1600,7 +1657,7 @@ var ContextSearch = class {
   }
   async search(input) {
     validateInput(input);
-    if (typeof input.query !== "string" || !input.query.trim() || input.query.length > 1e3) throw fail3("INVALID_INPUT", "query needs 1\u20131000 characters");
+    if (typeof input.query !== "string" || !input.query.trim() || input.query.length > 1e3) throw fail4("INVALID_INPUT", "query needs 1\u20131000 characters");
     const limit = integer(input.limit, 12, 40, "limit");
     const snippetLimit = integer(input.snippetLimit, 400, 600, "snippetLimit");
     const terms = tokens(input.query), phrase = fold(input.query.trim());
@@ -1664,21 +1721,21 @@ var ContextSearch = class {
   async read(input) {
     validateInput(input);
     const ref = input.atomId ? decode(input.atomId) : structuredClone(input.ref);
-    if (!ref || !SOURCES.includes(ref.source) || typeof ref.id !== "string" || !Number.isSafeInteger(ref.revision) || ref.revision < 1) throw fail3("INVALID_INPUT", "Supply atomId or revision-aware ref");
+    if (!ref || !SOURCES.includes(ref.source) || typeof ref.id !== "string" || !Number.isSafeInteger(ref.revision) || ref.revision < 1) throw fail4("INVALID_INPUT", "Supply atomId or revision-aware ref");
     let record;
     try {
       ({ note: record } = await this.notes.execute({ action: "get", id: ref.id }));
     } catch (error) {
-      if (error.code === "NOT_FOUND") throw fail3("MISSING", "Note no longer exists");
+      if (error.code === "NOT_FOUND") throw fail4("MISSING", "Note no longer exists");
       throw error;
     }
-    if (record.trashedAt && !input.includeTrashed) throw fail3("TRASHED", "Set includeTrashed to read a trashed note");
-    if (ref.field !== "content") throw fail3("INVALID_INPUT", "Invalid note field");
+    if (record.trashedAt && !input.includeTrashed) throw fail4("TRASHED", "Set includeTrashed to read a trashed note");
+    if (ref.field !== "content") throw fail4("INVALID_INPUT", "Invalid note field");
     const text = record.content || "";
-    if (record.revision !== ref.revision || ref.updatedAt !== void 0 && record.updatedAt !== ref.updatedAt || ref.fingerprint !== void 0 && hash(text) !== ref.fingerprint) throw fail3("CONFLICT", "Source changed; search again for a current reference");
+    if (record.revision !== ref.revision || ref.updatedAt !== void 0 && record.updatedAt !== ref.updatedAt || ref.fingerprint !== void 0 && hash(text) !== ref.fingerprint) throw fail4("CONFLICT", "Source changed; search again for a current reference");
     integer(ref.start, 0, text.length, "ref.start", 0);
     integer(ref.end, text.length, text.length, "ref.end", 0);
-    if (ref.start === void 0 || ref.end === void 0 || ref.start > ref.end) throw fail3("INVALID_INPUT", "Invalid source offsets");
+    if (ref.start === void 0 || ref.end === void 0 || ref.start > ref.end) throw fail4("INVALID_INPUT", "Invalid source offsets");
     const start = integer(input.start, ref.start, ref.end, "start", ref.start);
     const limit = integer(input.limit, 6e3, 2e4, "limit");
     const end = safeEnd(text, start, Math.min(ref.end, start + limit));
@@ -1896,7 +1953,7 @@ function registerNoteEdits(ctx, edits) {
 }
 
 // src/host/coauthor/note-chats.js
-var fail4 = (code, message) => Object.assign(new Error(message), { code });
+var fail5 = (code, message) => Object.assign(new Error(message), { code });
 var clone2 = (value) => structuredClone(value);
 var errors = {
   INVALID_REQUEST: [400, "Invalid note chat request"],
@@ -1930,7 +1987,7 @@ function metadata2(note) {
 }
 function bindingRecord(value, key) {
   const result = chatBindingSchema.safeParse(value);
-  if (!result.success || result.data.noteId !== key) throw fail4("INVALID_BINDING", errors.INVALID_BINDING[1]);
+  if (!result.success || result.data.noteId !== key) throw fail5("INVALID_BINDING", errors.INVALID_BINDING[1]);
   return result.data;
 }
 var NoteChats = class {
@@ -1945,18 +2002,18 @@ var NoteChats = class {
     this.closed = false;
   }
   execute(input) {
-    if (this.closed) return Promise.reject(fail4("CLOSED", errors.CLOSED[1]));
+    if (this.closed) return Promise.reject(fail5("CLOSED", errors.CLOSED[1]));
     let request, sessionId;
     try {
       request = actions2.parse(clone2(input));
     } catch {
-      return Promise.reject(fail4("INVALID_REQUEST", errors.INVALID_REQUEST[1]));
+      return Promise.reject(fail5("INVALID_REQUEST", errors.INVALID_REQUEST[1]));
     }
     if (request.action === "current") {
       try {
         sessionId = sessionIdSchema.parse(this.agents.requireInitiator().id);
       } catch {
-        return Promise.reject(fail4("NO_INITIATOR", errors.NO_INITIATOR[1]));
+        return Promise.reject(fail5("NO_INITIATOR", errors.NO_INITIATOR[1]));
       }
     }
     const work = this.queue.then(() => this.perform(request, sessionId)).then(clone2);
@@ -1973,7 +2030,7 @@ var NoteChats = class {
     try {
       value = await this.table.get(noteId);
     } catch {
-      throw fail4("STORAGE_FAILED", errors.STORAGE_FAILED[1]);
+      throw fail5("STORAGE_FAILED", errors.STORAGE_FAILED[1]);
     }
     return value == null ? null : bindingRecord(value, noteId);
   }
@@ -1987,7 +2044,7 @@ var NoteChats = class {
         entries = [];
         for await (const entry of await this.table.entries()) entries.push(entry);
       } catch {
-        throw fail4("STORAGE_FAILED", errors.STORAGE_FAILED[1]);
+        throw fail5("STORAGE_FAILED", errors.STORAGE_FAILED[1]);
       }
       for (const [key, value] of entries) {
         const binding3 = bindingRecord(value, key);
@@ -2003,7 +2060,7 @@ var NoteChats = class {
     }
     const note = await this.readNote(input.noteId);
     const noteMetadata = metadata2(note);
-    if (input.action === "start" && note.trashedAt) throw fail4("TRASHED", errors.TRASHED[1]);
+    if (input.action === "start" && note.trashedAt) throw fail5("TRASHED", errors.TRASHED[1]);
     const existing = await this.binding(input.noteId);
     if (input.action === "get") return { ok: true, binding: existing, note: noteMetadata };
     let binding2 = this.pending.get(input.noteId);
@@ -2014,10 +2071,10 @@ var NoteChats = class {
       try {
         created = await this.sessions.create({});
       } catch {
-        throw fail4("SESSION_CREATE_FAILED", errors.SESSION_CREATE_FAILED[1]);
+        throw fail5("SESSION_CREATE_FAILED", errors.SESSION_CREATE_FAILED[1]);
       }
       const parsedId = sessionIdSchema.safeParse(created?.sessionId);
-      if (!parsedId.success) throw fail4("SESSION_CREATE_FAILED", errors.SESSION_CREATE_FAILED[1]);
+      if (!parsedId.success) throw fail5("SESSION_CREATE_FAILED", errors.SESSION_CREATE_FAILED[1]);
       binding2 = chatBindingSchema.parse({
         noteId: input.noteId,
         sessionId: parsedId.data,
@@ -2030,7 +2087,7 @@ var NoteChats = class {
     try {
       await this.table.put(input.noteId, clone2(binding2));
     } catch {
-      throw fail4("STORAGE_FAILED", errors.STORAGE_FAILED[1]);
+      throw fail5("STORAGE_FAILED", errors.STORAGE_FAILED[1]);
     }
     this.pending.delete(input.noteId);
     return { ok: true, binding: binding2, note: noteMetadata };
@@ -2052,9 +2109,9 @@ var json2 = (value, status = 200) => Response.json(value, {
   headers: { "Cache-Control": "no-store" }
 });
 async function readInput(request) {
-  if (request.method !== "POST") throw fail4("INVALID_REQUEST", errors.INVALID_REQUEST[1]);
+  if (request.method !== "POST") throw fail5("INVALID_REQUEST", errors.INVALID_REQUEST[1]);
   const reader = request.body?.getReader();
-  if (!reader) throw fail4("INVALID_REQUEST", errors.INVALID_REQUEST[1]);
+  if (!reader) throw fail5("INVALID_REQUEST", errors.INVALID_REQUEST[1]);
   const decoder = new TextDecoder("utf-8", { fatal: true });
   let bytes = 0, text = "";
   try {
@@ -2064,13 +2121,13 @@ async function readInput(request) {
       bytes += value.byteLength;
       if (bytes > 32768) {
         await reader.cancel();
-        throw fail4("INVALID_REQUEST", errors.INVALID_REQUEST[1]);
+        throw fail5("INVALID_REQUEST", errors.INVALID_REQUEST[1]);
       }
       text += decoder.decode(value, { stream: true });
     }
     return JSON.parse(text + decoder.decode());
   } catch {
-    throw fail4("INVALID_REQUEST", errors.INVALID_REQUEST[1]);
+    throw fail5("INVALID_REQUEST", errors.INVALID_REQUEST[1]);
   } finally {
     reader.releaseLock();
   }
@@ -2168,7 +2225,13 @@ var NotesStore = class {
    * just like execute(), and does not coordinate external table writers.
    */
   searchSnapshot() {
-    const work = this.queue.then(() => tableValues(this.notesTable, noteSchema));
+    const tree = this.categories ? this.categories.snapshot() : Promise.resolve(defaultCategoryTree());
+    tree.catch(() => {
+    });
+    const work = this.queue.then(async () => {
+      const resolve2 = categoryResolver(await tree);
+      return (await tableValues(this.notesTable, noteSchema)).map((note) => ({ ...note, category: resolve2(note.category) }));
+    });
     this.queue = work.catch(() => {
     });
     return work;
@@ -2216,13 +2279,15 @@ var NotesStore = class {
   }
   async perform(input, tree) {
     const { action } = input;
+    const resolve2 = categoryResolver(tree);
+    if (input.category !== void 0) input.category = resolve2(input.category);
     const byId = new Map(tree.items.map((item) => [item.id, item]));
     const requireCategory = (id) => {
       if (!byId.has(id)) throw failure3("NOT_FOUND", "Category not found");
     };
     const lineage = (id) => {
       const result = [];
-      let item = byId.get(id);
+      let item = byId.get(resolve2(id));
       while (item) {
         result.push(item.id);
         item = byId.get(item.parentId);
@@ -2242,10 +2307,10 @@ var NotesStore = class {
         }
       }
       const query = input.query?.toLowerCase();
-      const matching = all.filter((note2) => Boolean(note2.trashedAt) === input.trashed && (!input.category || (input.includeDescendants ? lineage(note2.category).includes(input.category) || note2.category === input.category : note2.category === input.category)) && (!input.tag || note2.tags.includes(input.tag)) && (!input.pinnedOnly || note2.pinned) && (!query || [note2.title, note2.content, ...note2.tags].some((value) => value.toLowerCase().includes(query)))).sort(noteOrder);
+      const matching = all.filter((note2) => Boolean(note2.trashedAt) === input.trashed && (!input.category || (input.includeDescendants ? lineage(note2.category).includes(input.category) || resolve2(note2.category) === input.category : resolve2(note2.category) === input.category)) && (!input.tag || note2.tags.includes(input.tag)) && (!input.pinnedOnly || note2.pinned) && (!query || [note2.title, note2.content, ...note2.tags].some((value) => value.toLowerCase().includes(query)))).sort(noteOrder);
       return {
         ok: true,
-        notes: matching.slice(input.offset, input.offset + input.limit).map(metadata3),
+        notes: matching.slice(input.offset, input.offset + input.limit).map((note2) => metadata3({ ...note2, category: resolve2(note2.category) })),
         total: matching.length,
         offset: input.offset,
         limit: input.limit,
@@ -2254,16 +2319,18 @@ var NotesStore = class {
     }
     if (action === "create" || action === "journal") {
       if (action === "journal") {
-        const existing = (await tableValues(this.notesTable, noteSchema)).filter((note2) => !note2.trashedAt && note2.category === "journal" && note2.journalDate === input.date).sort(noteOrder)[0];
-        if (existing) return { ok: true, note: metadata3(existing) };
+        const existing = (await tableValues(this.notesTable, noteSchema)).filter((note2) => !note2.trashedAt && resolve2(note2.category) === resolve2("journal") && note2.journalDate === input.date).sort(noteOrder)[0];
+        if (existing) return { ok: true, note: metadata3({ ...existing, category: resolve2(existing.category) }) };
       }
       const now = this.now();
       const fields = action === "journal" ? { title: input.date, content: `# ${input.date}
 
 `, category: "journal", journalDate: input.date } : Object.fromEntries(Object.keys(editableShape).filter((key) => input[key] !== void 0).map((key) => [key, input[key]]));
+      fields.category = resolve2(fields.category ?? "document");
       return this.save(noteSchema.parse({ ...fields, id: randomUUID4(), createdAt: now, updatedAt: now, revision: 1 }));
     }
     const note = await this.note(input.id, input.revision);
+    note.category = resolve2(note.category);
     if (action === "get") return { ok: true, note };
     if (action === "versions") {
       const history = await this.history(note.id);
@@ -2507,7 +2574,7 @@ var CategoryStore = class {
       const tree = await this.read();
       if (input2.action === "list") return { ok: true, tree };
       if (tree.revision !== input2.revision) throw failure4("CONFLICT", "Category tree changed elsewhere. Refresh and retry.");
-      const previous = JSON.stringify(tree.items);
+      const previous = JSON.stringify(tree);
       const item = tree.items.find((item2) => item2.id === input2.id);
       if (input2.action !== "create" && !item) throw failure4("NOT_FOUND", "Category not found");
       if ((input2.action === "create" || input2.action === "move") && input2.parentId !== null && !tree.items.some((item2) => item2.id === input2.parentId)) throw failure4("NOT_FOUND", "Parent category not found");
@@ -2520,6 +2587,15 @@ var CategoryStore = class {
         });
       } else if (input2.action === "update") {
         item.name = input2.name;
+      } else if (input2.action === "delete") {
+        if (tree.items.length === 1) throw failure4("LAST_CATEGORY", "Keep at least one category for your notes");
+        const children = siblings(tree.items, item.id), peers = siblings(tree.items, item.parentId);
+        const promoted = peers.flatMap((peer) => peer.id === item.id ? children : [peer]);
+        for (const child of children) child.parentId = item.parentId;
+        tree.items = tree.items.filter((value) => value.id !== item.id);
+        normalize(tree.items, item.parentId, promoted);
+        const targetId = item.parentId ?? siblings(tree.items, null)[0].id;
+        tree.redirects = [...(tree.redirects || []).map((value) => ({ ...value, targetId: value.targetId === item.id ? targetId : value.targetId })), { id: item.id, targetId }];
       } else {
         if (input2.beforeId === item.id) throw failure4("INVALID_REQUEST", "Cannot move a category before itself");
         const target = input2.beforeId == null ? null : tree.items.find((value) => value.id === input2.beforeId);
@@ -2535,7 +2611,7 @@ var CategoryStore = class {
         normalize(tree.items, input2.parentId, destination);
       }
       categoryTreeSchema.parse(tree);
-      if (JSON.stringify(tree.items) === previous) return { ok: true, tree };
+      if (JSON.stringify(tree) === previous) return { ok: true, tree };
       tree.revision++;
       const validated = categoryTreeSchema.parse(tree);
       await this.table.put("categories", clone4(validated));
@@ -2549,14 +2625,14 @@ var categoryId = { type: "string", description: "Builtin document/reading/code/j
 var parameters4 = {
   type: "object",
   properties: {
-    action: { type: "string", enum: ["list", "create", "update", "move"] },
+    action: { type: "string", enum: ["list", "create", "update", "move", "delete"] },
     revision: {
       type: "integer",
       minimum: 0,
       maximum: Number.MAX_SAFE_INTEGER,
       description: "Current tree revision, required for every write; obtain from list."
     },
-    id: { ...categoryId, description: "Category ID required for update and move." },
+    id: { ...categoryId, description: "Category ID required for update, move and delete." },
     name: { type: "string", maxLength: 80, description: "Name for create or update. Empty resets a builtin label to its translated default." },
     parentId: { anyOf: [categoryId, { type: "null" }], description: "Destination parent; null or omitted means root." },
     beforeId: { anyOf: [categoryId, { type: "null" }], description: "Move before this destination sibling; null or omitted appends." }
@@ -2588,7 +2664,7 @@ function registerCategories(ctx, store) {
   }));
   ctx.effect(() => ctx.tools.register({
     name: "manage_note_categories",
-    description: "List, create, rename and move note categories. Moves support hierarchy and sibling ordering, up to 8 levels. Writes require the current tree revision; category IDs remain stable.",
+    description: "List, create, rename, move and delete note categories. Deletion preserves notes, assigns them to the parent or first remaining root, and promotes child categories. Keep at least one category. Moves support up to 8 levels. Writes require the current tree revision.",
     parameters: parameters4,
     output: {
       schema: { type: "object", properties: { ok: { type: "boolean" } }, required: ["ok"] },
@@ -2604,7 +2680,7 @@ function registerCategories(ctx, store) {
 
 // src/host/topics/store.js
 import { randomUUID as randomUUID6 } from "node:crypto";
-var fail5 = (code, message) => Object.assign(new Error(message), { code });
+var fail6 = (code, message) => Object.assign(new Error(message), { code });
 var clone5 = (value) => structuredClone(value);
 function binding(topic) {
   return topic.sessionId ? {
@@ -2635,7 +2711,7 @@ var TopicStore = class {
     this.sessions = sessions;
   }
   execute(input) {
-    if (this.closed) return Promise.reject(fail5("CLOSED", "Topic workspace is closed"));
+    if (this.closed) return Promise.reject(fail6("CLOSED", "Topic workspace is closed"));
     let request, libraryId;
     try {
       request = actions3.parse(clone5(input));
@@ -2646,7 +2722,7 @@ var TopicStore = class {
     const work = this.queue.then(async () => {
       this.assertLibrary(libraryId);
       if (request.libraryId !== void 0 && request.libraryId !== libraryId) {
-        throw fail5("CONFLICT", "Notebook library changed. Reload the topic workspace.");
+        throw fail6("CONFLICT", "Notebook library changed. Reload the topic workspace.");
       }
       return this.perform(request, libraryId);
     }).then((value) => {
@@ -2664,7 +2740,7 @@ var TopicStore = class {
   assertLibrary(libraryId) {
     const current = uuidSchema.parse(this.getLibraryId());
     for (const [id, candidate] of this.pending) if (candidate.libraryId !== current) this.pending.delete(id);
-    if (current !== libraryId) throw fail5("CONFLICT", "Notebook library changed. Reload the topic workspace.");
+    if (current !== libraryId) throw fail6("CONFLICT", "Notebook library changed. Reload the topic workspace.");
   }
   async checked(operation, libraryId) {
     try {
@@ -2678,11 +2754,11 @@ var TopicStore = class {
     this.assertLibrary(libraryId);
     if (value == null) {
       this.pending.delete(id);
-      throw fail5("NOT_FOUND", "Topic not found");
+      throw fail6("NOT_FOUND", "Topic not found");
     }
     const topic = topicSchema.parse(clone5(value));
-    if (topic.id !== id) throw fail5("INVALID_RECORD", "Topic key does not match its identity");
-    if (revision !== void 0 && topic.revision !== revision) throw fail5("CONFLICT", "Topic changed. Reload and retry.");
+    if (topic.id !== id) throw fail6("INVALID_RECORD", "Topic key does not match its identity");
+    if (revision !== void 0 && topic.revision !== revision) throw fail6("CONFLICT", "Topic changed. Reload and retry.");
     return topic;
   }
   async validateNewReferences(references, previous, libraryId) {
@@ -2691,7 +2767,7 @@ var TopicStore = class {
       if (old.has(referenceKey(reference2)) || !this.validateReference) continue;
       const valid = await this.checked(this.validateReference(clone5(reference2), { libraryId }), libraryId);
       this.assertLibrary(libraryId);
-      if (valid === false) throw fail5("INVALID_REFERENCE", "The selected reference is unavailable");
+      if (valid === false) throw fail6("INVALID_REFERENCE", "The selected reference is unavailable");
     }
   }
   result(topic, libraryId) {
@@ -2712,7 +2788,7 @@ var TopicStore = class {
         for await (const [key, value] of entries) {
           this.assertLibrary(libraryId);
           const topic2 = topicSchema.parse(clone5(value));
-          if (key !== topic2.id) throw fail5("INVALID_RECORD", "Topic key does not match its identity");
+          if (key !== topic2.id) throw fail6("INVALID_RECORD", "Topic key does not match its identity");
           topics.push(topic2);
         }
       } finally {
@@ -2728,7 +2804,7 @@ var TopicStore = class {
       const id = uuidSchema.parse(this.uuid());
       const existing = await this.checked(this.table.get(id), libraryId);
       this.assertLibrary(libraryId);
-      if (existing != null) throw fail5("CONFLICT", "Topic identity already exists");
+      if (existing != null) throw fail6("CONFLICT", "Topic identity already exists");
       const now = isoSchema3.parse(this.clock());
       return this.save(topicSchema.parse({
         id,
@@ -2771,21 +2847,21 @@ var TopicStore = class {
       this.pending.delete(topic.id);
       return this.result(topic, libraryId);
     }
-    if (topic.revision === Number.MAX_SAFE_INTEGER) throw fail5("CONFLICT", "Topic revision is exhausted");
+    if (topic.revision === Number.MAX_SAFE_INTEGER) throw fail6("CONFLICT", "Topic revision is exhausted");
     let candidate = this.pending.get(topic.id);
     if (!candidate) {
       const sessions = typeof this.sessions === "function" ? this.sessions() : this.sessions;
-      if (typeof sessions?.create !== "function") throw fail5("UNAVAILABLE", "Native conversations are unavailable");
+      if (typeof sessions?.create !== "function") throw fail6("UNAVAILABLE", "Native conversations are unavailable");
       let created;
       try {
         created = await this.checked(sessions.create({}), libraryId);
         this.assertLibrary(libraryId);
       } catch (error) {
         if (error.code === "CONFLICT") throw error;
-        throw fail5("SESSION_CREATE_FAILED", "Could not create a native conversation");
+        throw fail6("SESSION_CREATE_FAILED", "Could not create a native conversation");
       }
       const parsed = sessionSchema2.safeParse(created?.sessionId);
-      if (!parsed.success) throw fail5("SESSION_CREATE_FAILED", "Native conversation returned an invalid identity");
+      if (!parsed.success) throw fail6("SESSION_CREATE_FAILED", "Native conversation returned an invalid identity");
       candidate = { libraryId, sessionId: parsed.data };
       this.pending.set(topic.id, candidate);
     }
@@ -2858,7 +2934,7 @@ function registerTopics(ctx, store) {
 
 // src/host/discussions/store.js
 import { z as z13 } from "zod";
-var fail6 = (code, message) => Object.assign(new Error(message), { code });
+var fail7 = (code, message) => Object.assign(new Error(message), { code });
 var integer2 = z13.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER);
 var actions6 = z13.discriminatedUnion("action", [
   z13.object({
@@ -2900,7 +2976,7 @@ function relevance(text, query, terms, interactive) {
   return matches / terms.length >= 0.25 ? matches / terms.length : 0;
 }
 function safeWindow(text, start, limit) {
-  if (start > text.length) throw fail6("INVALID_INPUT", "start exceeds the source length");
+  if (start > text.length) throw fail7("INVALID_INPUT", "start exceeds the source length");
   if (start > 0 && /[\uDC00-\uDFFF]/.test(text[start]) && /[\uD800-\uDBFF]/.test(text[start - 1])) start--;
   let end = Math.min(text.length, start + limit);
   if (end < text.length && /[\uD800-\uDBFF]/.test(text[end - 1]) && /[\uDC00-\uDFFF]/.test(text[end])) end--;
@@ -2932,7 +3008,7 @@ async function rows(table) {
 }
 function observedSession(result, expected) {
   const id = result?.session?.id ?? result?.session?.sessionId;
-  if (id !== expected) throw fail6("FORBIDDEN", "The observed session does not match this reference");
+  if (id !== expected) throw fail7("FORBIDDEN", "The observed session does not match this reference");
 }
 var DiscussionSearch = class {
   constructor({
@@ -2971,17 +3047,17 @@ var DiscussionSearch = class {
       if (typeof id === "string" && id) return id;
     } catch {
     }
-    throw fail6("NO_INITIATOR", "Discussion recall requires an initiating conversation");
+    throw fail7("NO_INITIATOR", "Discussion recall requires an initiating conversation");
   }
   execute(input, options = {}) {
-    if (this.closed) return Promise.reject(fail6("CLOSED", "Discussion retrieval is closing"));
+    if (this.closed) return Promise.reject(fail7("CLOSED", "Discussion retrieval is closing"));
     options = { ...options };
     let request, initiatorId, libraryAtAdmission;
     try {
       request = actions6.parse(structuredClone(input));
       initiatorId = options.initiatorId;
       if (!options.interactive && !initiatorId) initiatorId = this.captureInitiator();
-      if (request.action === "current_topic" && options.interactive) throw fail6("INVALID_INPUT", "current_topic is available to conversation tools");
+      if (request.action === "current_topic" && options.interactive) throw fail7("INVALID_INPUT", "current_topic is available to conversation tools");
       libraryAtAdmission = Promise.resolve(options.libraryId ?? this.getLibraryId());
       libraryAtAdmission.catch(() => {
       });
@@ -2991,7 +3067,7 @@ var DiscussionSearch = class {
     const callerSignal = options.signal;
     const deadline = new AbortController();
     const milliseconds = options.interactive ? this.budgets.interactive : this.budgets.automatic;
-    const timer = this.setTimer(() => deadline.abort(fail6("TIMEOUT", "Discussion retrieval exceeded its time budget")), milliseconds);
+    const timer = this.setTimer(() => deadline.abort(fail7("TIMEOUT", "Discussion retrieval exceeded its time budget")), milliseconds);
     options.signal = callerSignal ? AbortSignal.any([callerSignal, deadline.signal]) : deadline.signal;
     const progress = { notes: [] };
     const work = this.queue.then(async () => {
@@ -3011,7 +3087,7 @@ var DiscussionSearch = class {
     });
     let onAbort;
     const bounded = new Promise((yes, no) => {
-      onAbort = () => no(options.signal.reason || fail6("ABORTED", "Discussion retrieval cancelled"));
+      onAbort = () => no(options.signal.reason || fail7("ABORTED", "Discussion retrieval cancelled"));
       options.signal.addEventListener("abort", onAbort, { once: true });
       work.then(yes, no);
       if (options.signal.aborted) onAbort();
@@ -3038,11 +3114,11 @@ var DiscussionSearch = class {
     return bounded;
   }
   async assertLibrary(libraryId) {
-    if (await this.getLibraryId() !== libraryId) throw fail6("CONFLICT", "Notebook library changed. Repeat the request in the current library.");
+    if (await this.getLibraryId() !== libraryId) throw fail7("CONFLICT", "Notebook library changed. Repeat the request in the current library.");
   }
   async scope(expectedLibraryId) {
     const libraryId = z13.string().uuid().parse(await this.getLibraryId());
-    if (expectedLibraryId !== void 0 && expectedLibraryId !== libraryId) throw fail6("CONFLICT", "Notebook library changed");
+    if (expectedLibraryId !== void 0 && expectedLibraryId !== libraryId) throw fail7("CONFLICT", "Notebook library changed");
     const chats = await rows(this.chatTable), topics = await rows(this.topicTable);
     await this.assertLibrary(libraryId);
     const sessions = /* @__PURE__ */ new Map();
@@ -3069,16 +3145,16 @@ var DiscussionSearch = class {
     return { libraryId, sessions, topics: currentTopics };
   }
   authorizeInitiator(scope, initiatorId) {
-    if (initiatorId !== void 0 && !scope.sessions.has(initiatorId)) throw fail6("FORBIDDEN", "This conversation is outside the current notebook library");
+    if (initiatorId !== void 0 && !scope.sessions.has(initiatorId)) throw fail7("FORBIDDEN", "This conversation is outside the current notebook library");
   }
   async sessionAccess(sessionId, context) {
     const current = await this.scope(context.scope.libraryId);
     this.authorizeInitiator(current, context.initiatorId);
     context.signal?.throwIfAborted();
     const binding2 = current.sessions.get(sessionId);
-    if (!binding2) throw fail6("FORBIDDEN", "Discussion is outside the current notebook library");
+    if (!binding2) throw fail7("FORBIDDEN", "Discussion is outside the current notebook library");
     const access = resolve(this.remoteAccess);
-    if (!access?.allows || !await access.allows({ kind: "session", id: sessionId })) throw fail6("FORBIDDEN", "Discussion access is unavailable or denied");
+    if (!access?.allows || !await access.allows({ kind: "session", id: sessionId })) throw fail7("FORBIDDEN", "Discussion access is unavailable or denied");
     await this.assertLibrary(current.libraryId);
     context.signal?.throwIfAborted();
     return binding2;
@@ -3087,32 +3163,32 @@ var DiscussionSearch = class {
     context.signal?.throwIfAborted();
     const binding2 = await this.sessionAccess(reference2.sessionId, context);
     const query = resolve(this.sessionQuery);
-    if (!query?.readEvent || !query.listEvents && !query.readSurface) throw fail6("DISCUSSIONS_UNAVAILABLE", "Current-surface discussion reading is unavailable");
+    if (!query?.readEvent || !query.listEvents && !query.readSurface) throw fail7("DISCUSSIONS_UNAVAILABLE", "Current-surface discussion reading is unavailable");
     let event;
     if (query.listEvents) {
       const visible2 = await query.listEvents(reference2.sessionId);
       context.signal?.throwIfAborted();
-      if (!visible2.some((row) => row.sessionId === reference2.sessionId && row.seq === reference2.seq && row.surface === "current")) throw fail6("NOT_FOUND", "This message is no longer on the current conversation surface");
+      if (!visible2.some((row) => row.sessionId === reference2.sessionId && row.seq === reference2.seq && row.surface === "current")) throw fail7("NOT_FOUND", "This message is no longer on the current conversation surface");
       const result = await query.readEvent({ sessionId: reference2.sessionId, seq: reference2.seq, before: 0, after: 0 }, context.signal);
       context.signal?.throwIfAborted();
       observedSession(result, reference2.sessionId);
       event = result.target;
       const fresh = await query.listEvents(reference2.sessionId);
-      if (!fresh.some((row) => row.sessionId === reference2.sessionId && row.seq === reference2.seq && row.surface === "current")) throw fail6("NOT_FOUND", "This message is no longer on the current conversation surface");
+      if (!fresh.some((row) => row.sessionId === reference2.sessionId && row.seq === reference2.seq && row.surface === "current")) throw fail7("NOT_FOUND", "This message is no longer on the current conversation surface");
     } else {
       const surface = await query.readSurface(reference2.sessionId);
       observedSession(surface, reference2.sessionId);
       event = surface.events.find((event2) => event2.seq === reference2.seq);
     }
-    if (event?.seq !== reference2.seq) throw fail6("NOT_FOUND", "Discussion message not found");
+    if (event?.seq !== reference2.seq) throw fail7("NOT_FOUND", "Discussion message not found");
     const extracted = eventText(event);
-    if (!extracted) throw fail6("NOT_FOUND", "This event has no eligible user or assistant text");
+    if (!extracted) throw fail7("NOT_FOUND", "This event has no eligible user or assistant text");
     await this.sessionAccess(reference2.sessionId, context);
     context.signal?.throwIfAborted();
     return { ...extracted, time: event.time, title: binding2.title };
   }
   validateReference(input, options = {}) {
-    if (this.closed) return Promise.reject(fail6("CLOSED", "Discussion retrieval is closing"));
+    if (this.closed) return Promise.reject(fail7("CLOSED", "Discussion retrieval is closing"));
     const work = this.validateAdmittedReference(input, { ...options });
     this.pendingValidation.add(work);
     void work.finally(() => this.pendingValidation.delete(work)).catch(() => {
@@ -3164,7 +3240,7 @@ var DiscussionSearch = class {
     const { scope, interactive = false, initiatorId, signal } = context;
     const terms = termsOf(request.query), cap = interactive ? request.limit : Math.min(6, request.limit);
     const topic = request.topicId ? scope.topics.find((topic2) => topic2.id === request.topicId) : null;
-    if (request.topicId && (!topic || !interactive && topic.sessionId !== initiatorId)) throw fail6("FORBIDDEN", "Question is outside this conversation");
+    if (request.topicId && (!topic || !interactive && topic.sessionId !== initiatorId)) throw fail7("FORBIDDEN", "Question is outside this conversation");
     const selected = new Set((topic?.references || []).map(referenceKey));
     const sessions = [...scope.sessions.values()].filter((row) => interactive || row.sessionId !== initiatorId).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt) || a.sessionId.localeCompare(b.sessionId));
     const examined = sessions.slice(0, interactive ? 64 : 24);

@@ -6,7 +6,7 @@ import path from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
 import { NoteStorage, NOTE_STORAGE_CONTROL_KEY } from '../../src/host/storage/note-storage.js';
 import { CategoryStore, categoryTreeSchema, defaultCategoryTree } from '../../src/host/categories/store.js';
-import { noteSchema, noteVersionSchema } from '../../src/host/notes/store.js';
+import { NotesStore,noteSchema, noteVersionSchema } from '../../src/host/notes/store.js';
 import { chatBindingSchema } from '../../src/host/coauthor/note-chats.js';
 import { attachmentSchema } from '../../src/host/attachments/schema.js';
 
@@ -298,4 +298,19 @@ test('category table identity is id and incomplete opt-in preserves old construc
   assert.deepEqual((await enabled.execute({ action: 'status' })).counts, { notes: 1, versions: 1, bindings: 1 });
   await assert.rejects(enabled.table('note_categories').put('wrong-key', defaultCategoryTree()), { code: 'INVALID_RECORD' });
   assert.deepEqual(await enabled.table('note_categories').entries(), []);
+});
+
+
+test('deleted category redirects survive directory migration, restart and return to default without changing note bytes',async t=>{
+ const f=await fixture(t),manager=await f.make().start();const binary=await f.seedAttachment(manager);
+ const categories=new CategoryStore(manager.table('note_categories'));
+ await categories.execute({action:'delete',id:'document',revision:0});
+ await f.assertCore(manager);await f.switchTo(manager,path.join(f.temp,'deleted-category-library'));await manager.close();
+ const restarted=await f.make().start(),again=new CategoryStore(restarted.table('note_categories'));
+ const tree=(await again.execute({action:'list'})).tree;assert.deepEqual(tree.redirects,[{id:'document',targetId:'reading'}]);
+ await f.assertCore(restarted);
+ const notes=new NotesStore(restarted.table('notes'),restarted.table('note_versions'),undefined,{categories:again});
+ const id=(await restarted.table('notes').entries())[0][0];assert.equal((await notes.execute({action:'get',id})).note.category,'reading');
+ const descriptor=await restarted.readAttachment(binary.row),parts=[];for await(const part of descriptor.data)parts.push(part);assert.deepEqual(Buffer.concat(parts),binary.bytes);
+ await f.switchTo(restarted,'');await f.assertCore(restarted);assert.deepEqual((await again.execute({action:'list'})).tree.redirects,tree.redirects);
 });

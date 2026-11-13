@@ -1,4 +1,23 @@
 /* Thick popovers: settings and history. */
+.dn-workspace .nb-folder-picker { min-width: 0; margin-top: 14px; padding: 14px; border: 1px solid var(--nb-line); border-radius: 10px; background: var(--nb-panel); }
+.dn-workspace .nb-folder-address-row { display: flex; align-items: stretch; gap: 8px; margin: 10px 0; }
+.dn-workspace .nb-folder-address-row input { min-width: 0; flex: 1; font-size: 12px; }
+.dn-workspace .nb-folder-address-row button { flex-shrink: 0; }
+.dn-workspace .nb-folder-navigation { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
+.dn-workspace .nb-folder-navigation select { width: auto; max-width: 100%; min-width: 0; font-size: 12px; }
+.dn-workspace .nb-folder-list { min-height: 90px; max-height: 240px; overflow: auto; scrollbar-width: thin; }
+.dn-workspace .nb-folder-list > p { color: var(--nb-muted); font-size: 12px; }
+.dn-workspace .nb-folder-entry { display: flex; align-items: center; gap: 9px; width: 100%; padding: 8px; border: 0; border-radius: 5px; background: transparent; color: var(--nb-ink); font: inherit; text-align: left; cursor: pointer; }
+.dn-workspace .nb-folder-entry:is(:hover,:focus-visible) { background: var(--nb-state); }
+.dn-workspace .nb-folder-entry svg { flex-shrink: 0; }
+.dn-workspace .nb-folder-entry span { min-width: 0; overflow-wrap: anywhere; }
+.dn-workspace .nb-folder-footer { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+.dn-workspace .nb-folder-footer code { flex: 1 0 100%; min-width: 0; color: var(--nb-muted); overflow-wrap: anywhere; font-size: 11px; }
+.dn-workspace .nb-folder-footer button:first-of-type { margin-left: auto; }
+.dn-workspace .nb-storage-form > .nb-folder-picker { display: flex; flex: 1; flex-direction: column; min-height: 0; margin: 0; padding: 16px 25px; border: 0; border-radius: 0; }
+.dn-workspace .nb-storage-form > .nb-folder-picker > :not(.nb-folder-list) { flex-shrink: 0; }
+.dn-workspace .nb-storage-form > .nb-folder-picker .nb-folder-list { flex: 1; min-height: 70px; max-height: none; }
+.dn-workspace .nb-folder-footer { padding-top: 10px; border-top: 1px solid var(--nb-line); }
 .dn-workspace :is(.nb-settings-dialog, .nb-history-dialog) {
   box-sizing: border-box;
   max-width: none;

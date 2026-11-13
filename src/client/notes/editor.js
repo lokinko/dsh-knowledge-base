@@ -11,11 +11,20 @@ function NoteEditor({note,draft,onSaved,onReplace,onTrashed,focusTitle=false,fon
 
  const [session]=R.useState(()=>new NoteEditSession({note,draft:note.trashedAt?null:draft,paused:true,cache:noteCache,save:async payload=>{let result;try{result=await notesRequest(payload);}catch(error){if(error.code==='TRASHED'||error.code==='NOT_FOUND')throw Object.assign(error,{code:'CONFLICT'});if(error.code!=='CONFLICT')throw error;const latest=await notesRequest({action:'get',id:note.id});if(latest.note.trashedAt||!noteFieldsEqual(latest.note,payload))throw error;result=latest;}onSaved(result.note);return result;}}));
  const [state,setState]=R.useState(()=>session.snapshot()),[operation,setOperation]=R.useState(false),[saving,setSaving]=R.useState(false),[notice,setNotice]=R.useState(''),[inputError,setInputError]=R.useState(''),[history,setHistory]=R.useState(false),[confirmTrash,setConfirmTrash]=R.useState(false),[confirmLatest,setConfirmLatest]=R.useState(false),[tags,setTags]=R.useState(()=>session.snapshot().fields.tags.join(', ')),[tagError,setTagError]=R.useState(false);
+ // Body edits and background save/cache status render as interruptible
+ // transitions so React never runs inside a keystroke's frame. Controlled
+ // native inputs (title, date, tags) stay urgent or their caret would jump.
+ const urgent=R.useRef(false);
  const alive=R.useRef(false),titleInput=R.useRef(null),tagInput=R.useRef(null),download=R.useRef(null),downloadUrls=R.useRef(new Set()),downloadTimers=R.useRef(new Set());
- R.useEffect(()=>{alive.current=true;session.start();const detach=onSession?.(session);setState(session.snapshot());const unsubscribe=session.subscribe(snapshot=>setState(snapshot||session.snapshot()));const guard=e=>{const snapshot=session.snapshot();if(snapshot.dirty&&!snapshot.cacheDurable){e.preventDefault();e.returnValue='';}};window.addEventListener('beforeunload',guard);if(focusTitle)titleInput.current?.focus({preventScroll:true});return()=>{detach?.();unsubscribe();window.removeEventListener('beforeunload',guard);alive.current=false;queueMicrotask(()=>{if(!alive.current)void session.pause();});for(const timer of downloadTimers.current)clearTimeout(timer);downloadTimers.current.clear();for(const url of downloadUrls.current)URL.revokeObjectURL(url);downloadUrls.current.clear();};},[session]);
+ R.useEffect(()=>{alive.current=true;session.start();const detach=onSession?.(session);setState(session.snapshot());const unsubscribe=session.subscribe(snapshot=>{const apply=()=>setState(snapshot||session.snapshot());if(urgent.current||!R.startTransition)apply();else R.startTransition(apply);});const guard=e=>{const snapshot=session.snapshot();if(snapshot.dirty&&!snapshot.cacheDurable){e.preventDefault();e.returnValue='';}};window.addEventListener('beforeunload',guard);if(focusTitle)titleInput.current?.focus({preventScroll:true});return()=>{detach?.();unsubscribe();window.removeEventListener('beforeunload',guard);alive.current=false;queueMicrotask(()=>{if(!alive.current)void session.pause();});for(const timer of downloadTimers.current)clearTimeout(timer);downloadTimers.current.clear();for(const url of downloadUrls.current)URL.revokeObjectURL(url);downloadUrls.current.clear();};},[session]);
  R.useEffect(()=>{if(document.activeElement!==tagInput.current)setTags(state.fields.tags.join(', '));},[state.fields.tags]);
- const locked=operation||!!note.trashedAt,fields=state.fields;
- function change(patch){try{session.change(patch);setNotice('');setInputError('');return true;}catch(error){setInputError(String(error?.message||error));setNotice('nbInvalid');return false;}}
+ // Read fields from the session, not the possibly deferred snapshot: a render
+ // must never hand the editor an older body than the one it already emitted.
+ const locked=operation||!!note.trashedAt,fields=session.snapshot().fields;
+ function change(patch,{deferred=false}={}){urgent.current=!deferred;try{session.change(patch);
+  // Skip no-op setters: with a pending transition React cannot bail out
+  // eagerly and would render the whole editor synchronously on every key.
+  if(notice)setNotice('');if(inputError)setInputError('');return true;}catch(error){setInputError(String(error?.message||error));setNotice('nbInvalid');return false;}finally{urgent.current=false;}}
  function editTags(value){setTags(value);const parsed=[...new Set(value.split(/[,，]/).map(tag=>tag.trim().replace(/^#+/,'')).filter(Boolean))];const invalid=parsed.length>20||parsed.some(tag=>tag.length>40);setTagError(invalid);if(!invalid)change({tags:parsed});}
  async function save(){if(operation||note.trashedAt)return;setSaving(true);setOperation(true);setNotice('');try{if(tagError||!await session.flush())throw new Error();await notesRequest({action:'checkpoint',id:note.id,revision:session.snapshot().baseRevision});setNotice('nbSnapshotSaved');onSaved();}catch{setNotice('nbSaveFailed');}finally{setSaving(false);setOperation(false);}}
  async function trash(){setOperation(true);setNotice('');try{if(!await session.flush())throw new Error();await notesRequest({action:'trash',id:note.id,revision:session.snapshot().baseRevision});session.abandon();onTrashed();}catch{setNotice('nbSaveFailed');}finally{setOperation(false);}}
@@ -23,7 +32,7 @@ function NoteEditor({note,draft,onSaved,onReplace,onTrashed,focusTitle=false,fon
  async function copy(){setOperation(true);setNotice('');try{const snapshot=session.snapshot().fields;const result=await notesRequest({action:'create',...snapshot,title:(snapshot.title||t('nbUntitled')).slice(0,190)+' '+t('nbCopySuffix')});const fresh=await notesRequest({action:'get',id:result.note.id});session.abandon();onReplace(fresh.note);onSaved();}catch{setNotice('nbError');}finally{setOperation(false);}}
  async function latest(){setOperation(true);setNotice('');try{const result=await notesRequest({action:'get',id:note.id});session.abandon();onReplace(result.note);}catch{setNotice('nbError');}finally{setOperation(false);}}
  function exportNote(){const data=session.snapshot().fields;let name=(data.title||t('nbUntitled')).replace(/[<>:"/\\|?*\u0000-\u001f]/g,'_').replace(/[. ]+$/,'').slice(0,120)||'note';if(/^(con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i.test(name))name='note-'+name;const url=URL.createObjectURL(new Blob([data.content],{type:'text/markdown;charset=utf-8'}));downloadUrls.current.add(url);download.current.href=url;download.current.download=name+'.md';download.current.click();const timer=setTimeout(()=>{URL.revokeObjectURL(url);downloadUrls.current.delete(url);downloadTimers.current.delete(timer);},1000);downloadTimers.current.add(timer);}
- R.useLayoutEffect(()=>{onActions?.({save,exportNote,togglePreview:()=>fieldActions.current?.toggleMode(),split:()=>fieldActions.current?.chooseMode('split'),toggleOutline:()=>setOutlineOpen(value=>!value),runCommand:id=>fieldActions.current?.runCommand(id)});return()=>onActions?.(null);});
+ R.useLayoutEffect(()=>{onActions?.({save,exportNote,toggleOutline:()=>setOutlineOpen(value=>!value),runCommand:id=>fieldActions.current?.runCommand(id)});return()=>onActions?.(null);});
  const saveWarning=state.conflict||(state.dirty&&((!state.cacheDurable&&!state.cachePending)||state.status==='offline'));
  const status=state.conflict?'nbConflict':state.status==='saved'?'nbSaved':state.status==='saving'?'nbSaving':state.status==='offline'?'nbOffline':state.cachePending?'wbCaching':!state.cacheDurable?'nbCacheFailed':'nbCached';
  return h('section',{className:'nb-editor tm-bs'+(outlineOpen?' has-outline':''),onKeyDown:e=>{
@@ -77,12 +86,11 @@ function NoteEditor({note,draft,onSaved,onReplace,onTrashed,focusTitle=false,fon
             }))),
         tagError&&h('p',{className:'nb-warning'},t('nbTagsLimit')),
         h(MarkdownField,{
-          value:fields.content,onChange:content=>change({content}),busy:!!note.trashedAt||(operation&&!saving),fontSize,maxLength:null,fieldRef:fieldActions,
-          autoGrow:false,startEditing:fields.content.length>100000,label:t('nbContent'),headingPrefix,
-          textareaProps:{className:'nb-content-input nb-source-viewport',rows:12,placeholder:t('nbWritePlaceholder')}
+          value:fields.content,onChange:content=>change({content},{deferred:true}),busy:!!note.trashedAt||(operation&&!saving),fontSize,maxLength:null,fieldRef:fieldActions,
+          label:t('nbContent')
         }),
         h(AttachmentPanel,{ownerId:note.id,disabled:locked,
-          onInsert:markdown=>{const content=session.snapshot().fields.content;let from=content.length;while(from>0&&content[from-1]==='\n')from--;if(!fieldActions.current?.applyRawChange({from,to:content.length,insert:'\n\n'+markdown+'\n'}))setNotice('nbError');}}),
+          onInsert:markdown=>{const content=session.snapshot().fields.content;let from=content.length;while(from>0&&content[from-1]==='\n')from--;if(!fieldActions.current?.applyRawChange({from,to:content.length,insert:'\n\n'+markdown+'\n'},content))setNotice('nbError');}}),
         h('footer',{className:'nb-doc-footer'},
           h('span',null,fields.content.length.toLocaleString()+' '+t('nbChars')),
           h('span',null,noteTime(note.createdAt)+' · '+t('nbAutoHint'))))),

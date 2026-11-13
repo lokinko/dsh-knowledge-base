@@ -11,7 +11,10 @@ function validateTree(tree, ctx) {
   const issue = message => ctx.addIssue({ code: 'custom', message });
   const byId = new Map(tree.items.map(item => [item.id, item]));
   if (byId.size !== tree.items.length) issue('Duplicate category IDs');
-  for (const id of builtinCategories) if (!byId.has(id)) issue('Missing builtin category');
+  const redirects=new Map((tree.redirects||[]).map(item=>[item.id,item.targetId]));
+  if(redirects.size!==(tree.redirects||[]).length)issue('Duplicate deleted category IDs');
+  for(const [id,targetId] of redirects)if(byId.has(id)||!byId.has(targetId))issue('Invalid deleted category redirect');
+  for (const id of builtinCategories) if (!byId.has(id)&&!redirects.has(id)) issue('Missing builtin category');
   const names = new Set();
   const orders = new Map();
   for (const item of tree.items) {
@@ -41,7 +44,10 @@ function validateTree(tree, ctx) {
   }
 }
 export const categoryTreeSchema = z.object({ id: z.literal('categories'), revision: revisionSchema,
-  items: z.array(itemSchema).min(4).max(500) }).strict().superRefine(validateTree);
+  items: z.array(itemSchema).min(1).max(500),
+  redirects:z.array(z.object({id:categoryIdSchema,targetId:categoryIdSchema}).strict()).max(10000).optional(),
+}).strict().superRefine(validateTree);
+export function categoryResolver(tree){const redirects=new Map((tree.redirects||[]).map(item=>[item.id,item.targetId]));return id=>redirects.get(id)||id;}
 export const defaultCategoryTree = () => ({ id: 'categories', revision: 0,
   items: builtinCategories.map((id, order) => ({ id, name: '', parentId: null, order })) });
 const actions = z.discriminatedUnion('action', [
@@ -51,6 +57,7 @@ const actions = z.discriminatedUnion('action', [
   z.object({ action: z.literal('update'), revision: revisionSchema, id: categoryIdSchema, name: nameSchema }).strict(),
   z.object({ action: z.literal('move'), revision: revisionSchema, id: categoryIdSchema,
     parentId: categoryIdSchema.nullable().default(null), beforeId: categoryIdSchema.nullable().optional() }).strict(),
+  z.object({ action:z.literal('delete'),revision:revisionSchema,id:categoryIdSchema }).strict(),
 ]);
 
 export {actions as categoryActionSchema};

@@ -5,6 +5,11 @@ export function initialCategoryTree(){
 export function categoryChildren(tree,parentId=null){
  return tree.items.filter(item=>item.parentId===parentId).sort((a,b)=>a.order-b.order||a.id.localeCompare(b.id));
 }
+export function resolveCategoryId(tree,id){return tree.redirects?.find(item=>item.id===id)?.targetId||id;}
+export function categoryDeleteTarget(tree,id){
+ const item=tree.items.find(item=>item.id===id);if(!item||tree.items.length===1)return null;
+ return item.parentId??categoryChildren(tree,null).flatMap(value=>value.id===id?categoryChildren(tree,id):[value])[0]?.id??null;
+}
 export function flattenCategories(tree,labelOf=item=>item.name||item.id){
  const result=[],seen=new Set(),children=new Map();
  for(const item of tree.items){if(!children.has(item.parentId))children.set(item.parentId,[]);children.get(item.parentId).push(item);}

@@ -1,4 +1,37 @@
 /* Reading stage and editor chrome. Content fonts remain controlled by the user's settings. */
+.dn-workspace .is-live .nb-source-editor { height: auto; min-height: 320px; overflow: visible; border: 0; border-radius: 0; }
+.dn-workspace .is-live .nb-source-editor .cm-editor { height: auto; }
+.dn-workspace .is-live .nb-source-editor .cm-scroller { height: auto; overflow: visible; }
+.dn-workspace .is-live .nb-source-editor .cm-content { box-sizing: border-box; flex: 1 1 0; width: 100%; min-width: 0; padding: 8px 2px 32px; }
+.dn-workspace .is-live .nb-source-editor .cm-editor.cm-focused { outline: none; }
+.dn-workspace .nb-source-editor .nb-live-heading { font-weight: 650; line-height: 1.5; padding-block: .4em .2em; }
+.dn-workspace .nb-source-editor .nb-live-heading span { text-decoration: none; }
+.dn-workspace .nb-source-editor .nb-live-h1 { font-size: 1.75em; }
+.dn-workspace .nb-source-editor .nb-live-h2 { font-size: 1.4em; }
+.dn-workspace .nb-source-editor .nb-live-h3 { font-size: 1.2em; }
+.dn-workspace .nb-live-strong { font-weight: 650; }
+.dn-workspace .nb-live-emphasis { font-style: italic; }
+.dn-workspace .nb-live-strike { text-decoration: line-through; }
+.dn-workspace .nb-source-editor .nb-live-inline-code { font-family: var(--nb-mono-font,monospace); background: var(--nb-field); border-radius: 4px; padding-block: 2px; }
+.dn-workspace .nb-source-editor .nb-live-quote { border-inline-start: 3px solid var(--nb-line); padding-inline-start: 14px; color: var(--nb-muted); }
+.dn-workspace .nb-source-editor .nb-live-link { color: var(--nb-link, #7daee8); text-decoration: underline; text-underline-offset: 3px; cursor: text; }
+.dn-workspace .nb-source-editor .nb-live-code { background: var(--nb-field); padding-inline: 16px; font-family: var(--nb-mono-font,monospace); font-size: .9em; line-height: 1.7; white-space: pre-wrap; }
+.dn-workspace .nb-source-editor .nb-live-fence { min-height: 10px; line-height: 10px; }
+.dn-workspace .nb-source-editor .nb-live-code .hljs-keyword { color: light-dark(#8053a8,#cf9df0); }
+.dn-workspace .nb-source-editor .nb-live-code :is(.hljs-string,.hljs-attr) { color: light-dark(#26764b,#9dcc9b); }
+.dn-workspace .nb-source-editor .nb-live-code :is(.hljs-number,.hljs-literal) { color: light-dark(#99631a,#e6be85); }
+.dn-workspace .nb-source-editor .nb-live-code :is(.hljs-title,.hljs-built_in) { color: light-dark(#2662a0,#8bbdef); }
+.dn-workspace .nb-source-editor .nb-live-code .hljs-comment { color: var(--nb-faint); font-style: italic; }
+.dn-workspace .nb-live-math { display: inline-block; max-width: 100%; vertical-align: middle; font-size: inherit; }
+.dn-workspace .nb-live-math-block { display: block; padding: 12px 0; }
+.dn-workspace .nb-live-math-result { display: inline-block; max-width: 100%; padding: 3px; border: 0; border-radius: 5px; background: transparent; color: inherit; font: inherit; text-align: inherit; white-space: normal; overflow-x: auto; cursor: text; }
+.dn-workspace .nb-live-math-result > :is(p,table) { margin: 0; }
+.dn-workspace .nb-live-math-result .katex-display { margin: .4em 0; }
+.dn-workspace .nb-live-math-block .nb-live-math-result { display: block; width: 100%; }
+.dn-workspace .nb-live-math-result:is(:hover,:focus-visible) { background: var(--nb-state); outline: 1px solid var(--nb-line); }
+.dn-workspace .nb-source-editor .nb-live-math-input { display: block; box-sizing: border-box; width: 100%; min-width: min(220px,100%); padding: 8px 10px; border: 1px solid var(--nb-focus); border-radius: 6px; background: var(--nb-field); color: var(--nb-ink); font: 13px/1.6 var(--nb-mono-font,monospace); resize: vertical; }
+.dn-workspace .nb-source-editor .nb-live-math-input[hidden] { display: none; }
+.dn-workspace .nb-live-task { accent-color: var(--nb-focus); vertical-align: middle; margin-inline: 0 6px; cursor: pointer; }
 .dn-workspace :is(.nb-title-input, .nb-content-input, .nb-document .em-markdown, .nb-version-preview .em-markdown, .nb-context-read, .nb-orphan .em-markdown, .em-font-preview) {
   font-family: var(--nb-content-font, inherit);
 }

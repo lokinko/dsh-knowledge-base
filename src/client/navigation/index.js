@@ -1,17 +1,27 @@
-import {BUILTIN_CATEGORIES,categoryDropMove,categoryRowPosition} from '../categories/tree.js';
+import {BUILTIN_CATEGORIES,categoryDropMove,categoryRowPosition,categoryDeleteTarget} from '../categories/tree.js';
 import {DirectoryNoteCache,directoryRows,directoryWindow,categoryAncestors,visibleExpandedCategories,categoryMoveInverse,categoryUndoAllowed,DIRECTORY_ROW_HEIGHT} from './model.js';
 
 export function createDirectoryNavigation({R,h,t,Icon,Button}){
- function DirectoryPanel({categories,activeCategory,activeNoteId,onSelectCategory,onOpenNote,onCreateNote,loadNotes,onMoveNote,refreshToken,disabled=false}){
-  const latest=R.useRef(null);latest.current={categories,loadNotes,onMoveNote,onOpenNote,onSelectCategory,onCreateNote};
+ function DeleteCategoryDialog({deletion,busy,locked,onConfirm,onClose}){
+  const dialog=R.useRef(null),cancel=R.useRef(null),heading=R.useId();
+  R.useEffect(()=>{const node=dialog.current,previous=node?.ownerDocument.activeElement;if(node&&!node.open)node.showModal();cancel.current?.focus();return()=>{if(node?.open)node.close();const target=deletion.anchor?.isConnected?deletion.anchor:previous;if(target?.isConnected)target.focus({preventScroll:true});};},[]);
+  return h('dialog',{ref:dialog,className:'nb-category-delete-dialog','aria-labelledby':heading,onCancel:event=>{event.preventDefault();if(!busy)onClose();}},
+   h('h3',{id:heading},t('nbDirectoryDelete')+' · '+deletion.label),h('p',null,t('nbDirectoryDeleteHint').replace('{category}',()=>deletion.targetLabel)),
+   h('div',{className:'nb-directory-form-actions'},h('button',{ref:cancel,type:'button',disabled:busy,onClick:onClose},t('nbDirectoryCancel')),h('button',{type:'button',className:'nb-category-delete-confirm',disabled:locked,onClick:onConfirm},t('nbDirectoryDeleteConfirm'))));
+ }
+ function DirectoryPanel({categories,activeCategory,activeNoteId,onSelectCategory,onOpenNote,onCreateNote,loadNotes,onMoveNote,onBeforeCategoryDelete,onCategoryDeleted,refreshToken,navigationState,disabled=false}){
+  const latest=R.useRef(null);latest.current={categories,loadNotes,onMoveNote,onOpenNote,onSelectCategory,onCreateNote,onBeforeCategoryDelete,onCategoryDeleted};
   const [cache]=R.useState(()=>new DirectoryNoteCache((...args)=>latest.current.loadNotes(...args)));
-  const [cacheVersion,setCacheVersion]=R.useState(0),[expanded,setExpanded]=R.useState(()=>new Set(categoryAncestors(categories.tree,activeCategory)));
-  const [selected,setSelected]=R.useState(activeCategory||null),[search,setSearch]=R.useState(''),[scrollTop,setScrollTop]=R.useState(0),[height,setHeight]=R.useState(480);
+  const [cacheVersion,setCacheVersion]=R.useState(0),[expanded,setExpanded]=R.useState(()=>new Set([...(navigationState?.current?.expanded||[]),...categoryAncestors(categories.tree,activeCategory)]));
+  const [selected,setSelected]=R.useState(activeCategory||null),[search,setSearch]=R.useState(()=>navigationState?.current?.search||''),[scrollTop,setScrollTop]=R.useState(0),[height,setHeight]=R.useState(480);
   const [form,setForm]=R.useState(null),[name,setName]=R.useState(''),[busy,setBusy]=R.useState(false),[notice,setNotice]=R.useState(''),[history,setHistory]=R.useState(null),[drop,setDrop]=R.useState(null);
+  const [menu,setMenu]=R.useState(null),[deletion,setDeletion]=R.useState(null),[menuPosition,setMenuPosition]=R.useState({left:0,top:0});
+  const menuRef=R.useRef(null),menuId=R.useId();
   const viewport=R.useRef(null),field=R.useRef(null),drag=R.useRef(null),working=R.useRef(false),alive=R.useRef(true),formId=R.useId();
   const locked=disabled||busy||categories.busy||categories.loading||!categories.ready;
+  R.useEffect(()=>{if(navigationState)navigationState.current={expanded,search};},[expanded,search,navigationState]);
   R.useEffect(()=>{alive.current=true;cache.resume();const off=cache.subscribe(()=>setCacheVersion(value=>value+1));return()=>{alive.current=false;off();cache.dispose();};},[cache]);
-  R.useEffect(()=>{cache.invalidate();},[cache,refreshToken]);
+  R.useEffect(()=>{cache.invalidate();},[cache,refreshToken,categories.tree.revision]);
   R.useEffect(()=>{for(const id of visibleExpandedCategories(categories.tree,expanded))void cache.load(id);},[cache,expanded,refreshToken,categories.tree]);
   R.useEffect(()=>{
    if(!activeCategory)return;
@@ -33,6 +43,23 @@ export function createDirectoryNavigation({R,h,t,Icon,Button}){
   const window=directoryWindow(rows.length,scrollTop,height);
   R.useEffect(()=>{if(scrollTop!==window.scrollTop){setScrollTop(window.scrollTop);if(viewport.current)viewport.current.scrollTop=window.scrollTop;}},[rows.length,height,scrollTop]);
   const selectedCategory=categories.tree.items.find(item=>item.id===selected);
+  const menuCategory=categories.tree.items.find(item=>item.id===menu?.id);
+  function closeMenu(focus=false){if(focus&&menu?.anchor.isConnected)menu.anchor.focus({preventScroll:true});setMenu(null);}
+  R.useLayoutEffect(()=>{
+   if(!menu)return;if(!menu.anchor.isConnected||!menuCategory){setMenu(null);return;}
+   const box=menu.anchor.getBoundingClientRect(),panel=menuRef.current.parentElement.getBoundingClientRect(),popup=menuRef.current.getBoundingClientRect(),win=menu.anchor.ownerDocument.defaultView;
+   const leftEdge=Math.max(panel.left,0)+4,rightEdge=Math.min(panel.right,win.innerWidth)-4;
+   const topEdge=Math.max(panel.top,0)+4,bottomEdge=Math.min(panel.bottom,win.innerHeight)-4;
+   const top=box.bottom+4+popup.height<=bottomEdge?box.bottom+4:box.top-popup.height-4;
+   setMenuPosition({left:Math.max(leftEdge,Math.min(box.right-popup.width,rightEdge-popup.width))-panel.left,top:Math.max(topEdge,Math.min(top,bottomEdge-popup.height))-panel.top});
+   menuRef.current?.querySelector('button:not(:disabled)')?.focus({preventScroll:true});
+  },[menu]);
+  R.useEffect(()=>{
+   if(!menu)return;const doc=menu.anchor.ownerDocument;
+   const outside=event=>{if(!menuRef.current?.contains(event.target)&&!menu.anchor.contains(event.target))setMenu(null);};
+   const resize=()=>setMenu(null);doc.addEventListener('pointerdown',outside,true);doc.defaultView.addEventListener('resize',resize);
+   return()=>{doc.removeEventListener('pointerdown',outside,true);doc.defaultView.removeEventListener('resize',resize);};
+  },[menu]);
   function message(key,cause){return t(key)+(cause?.message?' '+cause.message:'');}
   function begin(kind,item=null){if(locked)return;setForm({kind,id:item?.id??null});setName(kind==='rename'?item.name:'');setNotice('');}
   function toggle(id){setExpanded(previous=>{const next=new Set(previous);next.has(id)?next.delete(id):next.add(id);return next;});}
@@ -51,6 +78,23 @@ export function createDirectoryNavigation({R,h,t,Icon,Button}){
     if(form.kind!=='rename'&&form.id)setExpanded(previous=>new Set([...previous,form.id]));
     setForm(null);setName('');setNotice(t('nbDirectorySaved'));
    }
+  }
+  function confirmDelete(item){
+   closeMenu();const targetId=categoryDeleteTarget(categories.tree,item.id);if(!targetId)return;
+   setForm(null);setDeletion({id:item.id,label:categories.categoryLabel(item.id),revision:categories.tree.revision,targetId,targetLabel:categories.categoryLabel(targetId),anchor:menu?.anchor});
+  }
+  async function deleteCategory(){
+   if(!deletion||locked)return;const intent=deletion;
+   const next=await run(async()=>{
+    if(latest.current.onBeforeCategoryDelete&&await latest.current.onBeforeCategoryDelete()===false)throw new Error(t('nbDirectoryDeleteFlushFailed'));
+    return latest.current.categories.mutate('delete',{id:intent.id,revision:intent.revision});
+   });
+   if(!alive.current)return;setDeletion(null);
+   if(!next)return;
+   const target=next.redirects?.find(item=>item.id===intent.id)?.targetId||intent.targetId;
+   setHistory(null);setNotice(t('nbDirectoryDeleted'));setSelected(target);setExpanded(previous=>new Set([...previous,...categoryAncestors(next,target)]));
+   if(activeCategory===intent.id)latest.current.onSelectCategory?.(target);
+   try{await latest.current.onCategoryDeleted?.(next);}catch{if(alive.current)setNotice(t('nbDirectoryDeleteRefreshFailed'));}
   }
   function clearDrag(){drag.current=null;setDrop(null);}
   function startDrag(event,value){
@@ -119,10 +163,10 @@ export function createDirectoryNavigation({R,h,t,Icon,Button}){
     return h('div',{key:row.key,role:'treeitem','aria-level':row.depth+1,'aria-expanded':row.open,'aria-selected':activeCategory===item.id,'aria-posinset':undefined,
       className:'nb-directory-row nb-directory-folder'+(activeCategory===item.id?' is-active':'')+(selected===item.id?' is-selected':'')+(drop?.id===item.id?' drop-'+drop.position:''),
       style:rowStyle(row.depth),onDragOver:event=>over(event,item),onDrop:event=>dropped(event,item)},
-     h('button',{type:'button',className:'nb-directory-toggle'+(row.open?' is-open':''),disabled:disabled,'aria-label':t(row.open?'nbDirectoryCollapse':'nbDirectoryExpand')+' '+row.label,'aria-expanded':row.open,onClick:()=>toggle(item.id)},h(Icon,{name:'chevron',size:12})),
      h('button',{type:'button',className:'nb-directory-drag',draggable:!locked,disabled:locked,'aria-label':t('nbDirectoryDragFolder')+' '+row.label,title:t('nbDirectoryDragHint'),onDragStart:event=>startDrag(event,{kind:'category',id:item.id}),onDragEnd:clearDrag},'⋮⋮'),
+     h('button',{type:'button',className:'nb-directory-toggle'+(row.open?' is-open':''),disabled:disabled,'aria-label':t(row.open?'nbDirectoryCollapse':'nbDirectoryExpand')+' '+row.label,'aria-expanded':row.open,onClick:()=>toggle(item.id)},h(Icon,{name:'chevron',size:12})),
      h('button',{type:'button',className:'nb-directory-name',disabled:disabled,title:row.label,'aria-current':activeCategory===item.id?'page':undefined,onFocus:()=>setSelected(item.id),onClick:()=>selectFolder(item)},h(Icon,{name:'folder',size:15}),h('span',{className:'nb-directory-title'},row.label)),
-     h('button',{type:'button',className:'nb-directory-add-child',disabled:locked,title:t('nbDirectoryAddChild'),'aria-label':t('nbDirectoryAddChild')+' '+row.label,onClick:()=>begin('create',item)},h(Icon,{name:'plus',size:12})));
+     h('button',{type:'button',className:'nb-directory-category-actions',disabled:locked,title:t('nbDirectoryCategoryActions'),'aria-label':t('nbDirectoryCategoryActions')+' '+row.label,'aria-haspopup':'menu','aria-expanded':menu?.id===item.id,'aria-controls':menu?.id===item.id?menuId:undefined,onClick:event=>menu?.id===item.id?closeMenu():setMenu({id:item.id,anchor:event.currentTarget,anchorTop:event.currentTarget.getBoundingClientRect().top})},'⋯'));
    }
    if(row.kind==='note'){
     const note=row.note,title=note.title||t('nbUntitled');
@@ -138,6 +182,15 @@ export function createDirectoryNavigation({R,h,t,Icon,Button}){
   }
   const dropLabel=drop?t(drop.id===null?'nbDirectoryDropRoot':({before:'nbDirectoryDropBefore',after:'nbDirectoryDropAfter',inside:'nbDirectoryDropInside'})[drop.position])+(drop.id===null?'':' '+categories.categoryLabel(drop.id)):'';
   return h('section',{className:'nb-directory-panel','aria-label':t('nbDirectoryTitle'),'aria-busy':busy||categories.loading,onKeyDown:keys},
+   menu&&menuCategory&&h('div',{ref:menuRef,id:menuId,role:'menu','aria-label':t('nbDirectoryCategoryActions')+' '+categories.categoryLabel(menuCategory.id),className:'nb-directory-category-menu',style:{position:'absolute',...menuPosition},onKeyDown:event=>{
+    if(event.nativeEvent?.isComposing||event.keyCode===229)return;
+    const buttons=[...menuRef.current.querySelectorAll('button:not(:disabled)')],index=buttons.indexOf(event.target);
+    if(event.key==='Escape'){event.preventDefault();event.stopPropagation();closeMenu(true);}
+    else if(event.key==='Tab')closeMenu();
+    else if(['ArrowDown','ArrowUp','Home','End'].includes(event.key)){event.preventDefault();event.stopPropagation();buttons[event.key==='Home'?0:event.key==='End'?buttons.length-1:(index+(event.key==='ArrowDown'?1:-1)+buttons.length)%buttons.length]?.focus();}
+   }},h('button',{type:'button',role:'menuitem',disabled:locked,onClick:()=>{closeMenu();begin('create',menuCategory);}},h(Icon,{name:'plus',size:14}),t('nbDirectoryAddChild')),
+    h('button',{type:'button',role:'menuitem',className:'is-danger',disabled:locked||!categoryDeleteTarget(categories.tree,menuCategory.id),title:categories.tree.items.length===1?t('nbDirectoryKeepCategory'):undefined,onClick:()=>confirmDelete(menuCategory)},h(Icon,{name:'trash',size:14}),t('nbDirectoryDelete'))),
+   deletion&&h(DeleteCategoryDialog,{deletion,busy,locked,onConfirm:deleteCategory,onClose:()=>setDeletion(null)}),
    h('div',{className:'nb-directory-toolbar'},
     h('strong',null,t('nbDirectoryTitle')),
     h('button',{type:'button',className:'nb-directory-action',disabled:locked,onClick:()=>begin('create'),title:t('nbDirectoryAddRoot'),'aria-label':t('nbDirectoryAddRoot')},h(Icon,{name:'folder',size:14}),h(Icon,{name:'plus',size:11})),
@@ -149,7 +202,7 @@ export function createDirectoryNavigation({R,h,t,Icon,Button}){
     h('div',{className:'nb-directory-form-actions'},h('button',{type:'submit',disabled:locked||!name.trim()},t('nbDirectorySave')),h('button',{type:'button',disabled:busy,onClick:()=>setForm(null)},t('nbDirectoryCancel')))),
    history&&h('button',{type:'button',className:'nb-directory-undo',disabled:locked,onClick:undo},h(Icon,{name:'back',size:13}),t('nbDirectoryUndo')),
    categories.error&&h('div',{className:'nb-directory-error',role:'alert'},categories.error,h('button',{type:'button',disabled:locked,onClick:()=>categories.refresh()},t('nbDirectoryRefresh'))),
-   h('div',{ref:viewport,className:'nb-directory-viewport'+(drop?.id===null?' is-root-over':''),role:'tree','aria-label':t('nbDirectoryTitle'),style:{overflowY:'auto',minHeight:0,flex:'1 1 auto'},onScroll:event=>setScrollTop(event.currentTarget.scrollTop),
+   h('div',{ref:viewport,className:'nb-directory-viewport'+(drop?.id===null?' is-root-over':''),role:'tree','aria-label':t('nbDirectoryTitle'),style:{overflowY:'auto',minHeight:0,flex:'1 1 auto'},onScroll:event=>{if(menu&&Math.abs(menu.anchor.getBoundingClientRect().top-menu.anchorTop)>1)setMenu(null);setScrollTop(event.currentTarget.scrollTop);},
     onDragOver:event=>{if(!event.target?.closest?.('.nb-directory-row'))over(event,null);},onDrop:event=>{if(!event.target?.closest?.('.nb-directory-row'))dropped(event,null);}},
     h('div',{'aria-hidden':true,className:'nb-directory-spacer',style:{height:window.top}}),
     ...rows.slice(window.start,window.end).map(renderRow),

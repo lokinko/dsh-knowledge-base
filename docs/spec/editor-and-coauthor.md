@@ -32,7 +32,7 @@
 
 Markdown 渲染关闭原始 HTML，公式使用 KaTeX `trust:false`，链接处理危险 URL，代码高亮仅启用指定语言。交互任务列表只修改对应原始 `[ ]/[x]` 字符，保留换行与其他字节语义。
 
-正文使用 [CodeMirror 增量编辑器](../../src/client/editor/index.js)，以可见区 DOM 替代整篇 textarea；原文映射保留混合 CRLF/LF/CR，撤销与重做精确恢复分隔符。超过 100,000 字符初始进入编辑模式。小文档快速预览，大文档通过本地 Worker 与内容块窗口渲染，提供编辑/预览/分屏；标题目录全量派生并窗口化，关闭时停止解析。标题等控件继续使用自适应高度。字体、列表布局和聊天开关沿用现有本机设置键。详见[工作区性能规格](performance-and-workbench.md)。
+正文使用 [CodeMirror 增量编辑器](../../src/client/editor/index.js) 和[即时渲染扩展](../../src/client/editor/live-preview.js)，只有一个编辑区域，不再提供编辑/预览/分屏切换。标题、粗体、斜体、引用与链接直接显示样式；代码块可直接编辑并高亮，公式使用 KaTeX 显示，点击可展开局部公式输入，排版结果随输入更新。图片与表格显示渲染结果，点击展开相应的 Markdown 输入。未闭合的数学标记保留原文，直到补齐后呈现。任务列表直接勾选。原文映射保留混合 CRLF/LF/CR，撤销与重做恢复分隔符；显示变化不会改写文稿。文档目录跳转到同一个编辑器中的原文位置，标题全量派生并窗口化，关闭时停止解析。历史等独立预览继续使用本地 Worker 和内容块窗口化。标题控件、字体、列表布局和聊天开关沿用现有机制。详见[工作区性能规格](performance-and-workbench.md)。
 
 ## DSH 原生共写
 
@@ -44,7 +44,7 @@ Markdown 渲染关闭原始 HTML，公式使用 KaTeX `trust:false`，链接处�
 
 ## 性能边界与验收
 
-输入路径已移除浏览器逐键完整 JSON/localStorage 写入；全文字符串比较、IndexedDB 克隆、Worker 传输、解析和单个巨大内容块仍有随文稿规模增长的成本，不能把无字数上限描述为任意结构下都恒定耗时。实测口径与边界见[工作区性能规格](performance-and-workbench.md)。
+输入路径已移除浏览器逐键完整 JSON/localStorage 写入。正文变更与后台保存状态以 React transition 渲染，编辑器记住近期自身发出的正文，被打断的延迟渲染不会回滚输入；标题、日期与标签保持同步受控。IndexedDB 草稿驱动优先运行在内嵌 Worker，Worker 无法启动或打开数据库时回退主线程驱动；Worker 中断视为连接关闭（`InvalidStateError`），由重试重新打开。代码块编辑帧沿用映射后的旧着色，停顿约 80 ms 后在空闲时间重新高亮。全文字符串比较、IndexedDB 克隆、Worker 传输、解析和单个巨大内容块仍有随文稿规模增长的成本，不能把无字数上限描述为任意结构下都恒定耗时。实测口径与边界见[工作区性能规格](performance-and-workbench.md)。
 
 缓存订阅在 start 绑定、pause/stop/abandon 解绑，避免关闭笔记后全局监听器持有完整旧正文。恢复按 key/raw/generation 同步暂停期间结果。手动保存继续接受正文输入，由已有串行 drain 提交后续修改。
 

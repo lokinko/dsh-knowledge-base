@@ -34,7 +34,7 @@ export class CategoryStore {
       const tree = await this.read();
       if (input.action === 'list') return { ok: true, tree };
       if (tree.revision !== input.revision) throw failure('CONFLICT', 'Category tree changed elsewhere. Refresh and retry.');
-      const previous = JSON.stringify(tree.items);
+      const previous = JSON.stringify(tree);
       const item = tree.items.find(item => item.id === input.id);
       if (input.action !== 'create' && !item) throw failure('NOT_FOUND', 'Category not found');
       if ((input.action === 'create' || input.action === 'move') && input.parentId !== null &&
@@ -44,6 +44,15 @@ export class CategoryStore {
           order: siblings(tree.items, input.parentId).length });
       } else if (input.action === 'update') {
         item.name = input.name;
+      } else if(input.action==='delete'){
+        if(tree.items.length===1)throw failure('LAST_CATEGORY','Keep at least one category for your notes');
+        const children=siblings(tree.items,item.id),peers=siblings(tree.items,item.parentId);
+        const promoted=peers.flatMap(peer=>peer.id===item.id?children:[peer]);
+        for(const child of children)child.parentId=item.parentId;
+        tree.items=tree.items.filter(value=>value.id!==item.id);
+        normalize(tree.items,item.parentId,promoted);
+        const targetId=item.parentId??siblings(tree.items,null)[0].id;
+        tree.redirects=[...(tree.redirects||[]).map(value=>({...value,targetId:value.targetId===item.id?targetId:value.targetId})),{id:item.id,targetId}];
       } else {
         if (input.beforeId === item.id) throw failure('INVALID_REQUEST', 'Cannot move a category before itself');
         const target = input.beforeId == null ? null : tree.items.find(value => value.id === input.beforeId);
@@ -59,7 +68,7 @@ export class CategoryStore {
         normalize(tree.items, input.parentId, destination);
       }
       categoryTreeSchema.parse(tree);
-      if (JSON.stringify(tree.items) === previous) return { ok: true, tree };
+      if (JSON.stringify(tree) === previous) return { ok: true, tree };
       tree.revision++;
       const validated = categoryTreeSchema.parse(tree);
       await this.table.put('categories', clone(validated));

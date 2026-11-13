@@ -24,7 +24,7 @@ npm pack --dry-run --ignore-scripts
 
 - [Host 构建](../../scripts/build/host.mjs)：入口 `src/host/index.js`，目标 Node 22，打包本仓库逻辑，仅 Zod 与 Node 内置模块保持外部依赖。
 - [Client 构建](../../scripts/build/client.mjs)：入口 `src/client/index.js`，目标 Chrome 110，打包为单 IIFE。CSS 作为文本显式导入，JSON 文案由模块合成；不再拼接/重写生成源码区域。
-- Client 构建同时生成并内嵌 Markdown Worker IIFE，合并其许可和依赖图；运行时不下载远端解析器。CodeMirror 为构建依赖，不作为 Host 运行依赖。
+- Client 构建同时生成并内嵌 Markdown Worker 与草稿持久化 Worker IIFE，合并其许可和依赖图；运行时不下载远端解析器。CodeMirror 为构建依赖，不作为 Host 运行依赖。
 - [样式构建](../../scripts/build/styles.mjs) 将 KaTeX 字体嵌入为 data URL，限制 Bootstrap CSS 与动画名称的作用域；[许可收集](../../scripts/build/notices.mjs) 根据 Client/Worker 的实际依赖图及 CSS 依赖生成第三方许可。Client 构建入口只装配这些步骤，无未解析浏览器 import。
 - 构建 metadata 和临时 CSS 位于被 Git 忽略的 `.build/`；源码与脚本不混入发布运行依赖图。
 - [发布检查](../../scripts/check-release.mjs) 验证入口、身份、两端依赖边界、资源、规格及私有路径/凭据；[重复构建检查](../../scripts/check-reproducible.mjs) 校验相同输入下三份正式产物逐字节相同。
@@ -65,7 +65,7 @@ npm run bench:client
 npm run bench:workspace
 ```
 
-浏览器 [workspace.bench.mjs](../../tests/performance/workspace.bench.mjs) 可指定冻结的 `--client`、`--host`、`--output`、`--sizes` 和 `--label`，固定种子与设备口径，验证真实键入及持久正文长度。新异步预览必须等待 `data-md-preview-state="ready"` 再稳定两帧；调整等待方法后需要以同版脚本重跑 baseline。不得与其他浏览器套件并行争用测试资源。方法与边界见[工作区性能规格](performance-and-workbench.md)。
+浏览器 [workspace.bench.mjs](../../tests/performance/workspace.bench.mjs) 可指定冻结的 `--client`、`--host`、`--output`、`--sizes` 和 `--label`，固定种子与设备口径，验证真实键入及持久正文长度。`--scenario live-code` 在代码块内键入；`--throttle N` 经 CDP 施加 N 倍 CPU 节流，`--burst N`（默认 60）以每秒 40 键连续输入并记录帧间隔、超过 25 ms 的卡顿帧和掉帧数，用于比较刷新流畅度；`--profile` 另存原始 `.cpuprofile`。新异步预览必须等待 `data-md-preview-state="ready"` 再稳定两帧；调整等待方法后需要以同版脚本重跑 baseline。不得与其他浏览器套件并行争用测试资源。方法与边界见[工作区性能规格](performance-and-workbench.md)。
 
 下面保留旧同步缓存算法的历史数据；它不代表当前浏览器 IndexedDB + CodeMirror 的端到端表现。
 

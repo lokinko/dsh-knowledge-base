@@ -2,14 +2,16 @@ import {NoteNavigation} from './navigation.js';
 import {groupLibraryNotes} from '../studio/sections.js';
 import {createNotesHistory} from './history.js';
 import {createNoteEditor} from './editor.js';
+import {resolveCategoryId} from '../categories/tree.js';
 
-export function createNotesUI({R,h,t,Icon,Button,AutoTextarea,MarkdownField,MarkdownPreview,DocumentOutline,useCategories,CategoryNavigation,CategoryPicker,CategoryManager,DirectoryPanel,CommandMenu,ShortcutHelp,AttachmentPanel,NoteSettings,NoteLibraryCard,CoauthorPanel,noteCache,notesRequest,noteFieldsEqual,noteTime,localCalendar}){
+export function createNotesUI({R,h,t,Icon,Button,AutoTextarea,MarkdownField,MarkdownPreview,DocumentOutline,useCategories,CategoryPicker,CategoryManager,DirectoryPanel,CommandMenu,ShortcutHelp,AttachmentPanel,NoteSettings,NoteLibraryCard,CoauthorPanel,noteCache,notesRequest,noteFieldsEqual,noteTime,localCalendar}){
 const {NotesHistory}=createNotesHistory({R,h,t,Button,MarkdownPreview,notesRequest,noteTime});
 const {NoteEditor}=createNoteEditor({R,h,t,Icon,Button,AutoTextarea,MarkdownField,DocumentOutline,CategoryPicker,AttachmentPanel,NotesHistory,noteCache,notesRequest,noteFieldsEqual,noteTime});
 function NotesWorkspace({appearance,onAppearanceChange,slotProps,initialNoteId,onInitialConsumed,initialCreateToken,onInitialCreateConsumed}){
  const categoryState=useCategories();
  const [categoryManager,setCategoryManager]=R.useState(false);
  const [directoryEpoch,setDirectoryEpoch]=R.useState(0),[navigationOpen,setNavigationOpen]=R.useState(false);
+ const directoryState=R.useRef(null);
  const [commandMode,setCommandMode]=R.useState(null),[shortcutsOpen,setShortcutsOpen]=R.useState(false);
  const editorCommands=R.useRef(null);
  const isCategory=id=>categoryState.tree.items.some(item=>item.id===id);
@@ -25,6 +27,7 @@ function NotesWorkspace({appearance,onAppearanceChange,slotProps,initialNoteId,o
  function refreshDrafts(){try{const latest=new Map();for(const record of noteCache.records())latest.set(record.noteId,record);setDrafts([...latest.values()].reverse());}catch{}}
  const refresh=R.useCallback(async()=>{const current=++sequence.current;setLoading(true);try{const result=await notesRequest({action:'list',limit:50,offset,query:query.trim(),...(isCategory(view)?{category:view}:{}),trashed:view==='trash',...(tag.trim().replace(/^#+/,'')?{tag:tag.trim().replace(/^#+/,'')}:{})});if(mounted.current&&current===sequence.current){setData(result);setError('');}}catch{if(mounted.current&&current===sequence.current)setError('nbError');}finally{if(mounted.current&&current===sequence.current)setLoading(false);}},[view,query,tag,offset,categoryState.tree.revision]);
  refreshRef.current=refresh;
+ R.useEffect(()=>{if(categoryState.ready&&!['all','trash'].includes(view)&&!isCategory(view)){const target=resolveCategoryId(categoryState.tree,view);setView(isCategory(target)?target:'all');setOffset(0);}},[categoryState.tree.revision,categoryState.ready,view]);
  R.useEffect(()=>{const timer=setTimeout(refresh,180);refreshDrafts();return()=>clearTimeout(timer);},[refresh]);
  R.useEffect(()=>{let active=true,timer=0;const update=()=>{clearTimeout(timer);timer=setTimeout(()=>{if(active)refreshDrafts();},120);};noteCache.ready?.then(()=>{if(active)refreshDrafts();},()=>{if(active)setError('wbDraftUnavailable');});const off=noteCache.subscribeRecords?.(update);return()=>{active=false;clearTimeout(timer);off?.();};},[]);
  R.useEffect(()=>{mounted.current=true;const focus=()=>{categoryState.refresh();setDirectoryEpoch(value=>value+1);refreshRef.current();refreshDrafts();syncRemote();};window.addEventListener('focus',focus);window.addEventListener('storage',refreshDrafts);return()=>{mounted.current=false;navigation.cancelPending();sequence.current++;clearTimeout(refreshTimer.current);window.removeEventListener('focus',focus);window.removeEventListener('storage',refreshDrafts);};},[]);
@@ -64,6 +67,11 @@ function replaceFrom(entry,note,focusTitle=false){if(!mounted.current)return;con
    changed(result);return result;
   }catch{setError('nbError');setDirectoryEpoch(value=>value+1);return null;}
  }
+ async function categoryDeleted(tree){
+  const session=editorRef.current;
+  if(session){const category=session.snapshot().fields.category,target=resolveCategoryId(tree,category);if(target!==category){session.change({category:target});if(!await session.flush())throw new Error('Category display could not be refreshed');}}
+  await refreshRef.current();await syncRemote();
+ }
  const loadDirectoryNotes=R.useCallback((category,{offset=0,limit=100}={})=>notesRequest({action:'list',category,includeDescendants:false,offset,limit}),[]);
  const categories=[['all','nbAll','book'],['document','nbDocument','note'],['reading','nbReading','book'],['code','nbCode','code'],['journal','nbJournal','calendar'],['trash','nbTrash','trash']];
   const currentLabel=isCategory(view)?categoryState.categoryLabel(view):t(categories.find(item=>item[0]===view)?.[1]||'nbAll');
@@ -80,8 +88,6 @@ function replaceFrom(entry,note,focusTitle=false){if(!mounted.current)return;con
     {id:'undo',label:t('wbUndo'),icon:'back',run:()=>editorCommands.current?.runCommand('undo')},
     {id:'redo',label:t('wbRedo'),icon:'refresh',run:()=>editorCommands.current?.runCommand('redo')},
     {id:'find-document',label:t('wbFindInDocument'),icon:'search',run:()=>editorCommands.current?.runCommand('search')},
-    {id:'preview',label:t('wbTogglePreview'),keys:'Mod+E',icon:'note',run:()=>editorCommands.current?.togglePreview()},
-    {id:'split',label:t('wbToggleSplit'),icon:'matrix',run:()=>editorCommands.current?.split()},
     {id:'outline',label:t('wbToggleOutline'),keys:'Mod+Shift+O',icon:'list',run:()=>editorCommands.current?.toggleOutline()},
     {id:'focus',label:t('wbToggleFocus'),keys:'Mod+Shift+Enter',icon:'focus',run:()=>setFocused(value=>!value)},
     {id:'export',label:t('nbExport'),icon:'download',run:()=>editorCommands.current?.exportNote()},
@@ -97,7 +103,6 @@ function replaceFrom(entry,note,focusTitle=false){if(!mounted.current)return;con
    else if(event.shiftKey&&key==='f')action='search';
    else if(event.shiftKey&&key==='o')action='outline';
    else if(event.shiftKey&&key==='enter')action='focus';
-   else if(!event.shiftKey&&key==='e')action='preview';
    else if(!event.shiftKey&&(key==='s'||key==='enter'))action='save';
    else if(!event.shiftKey&&key==='f'&&!event.target.closest?.('.cm-editor'))action='find-document';
    else if(!event.target.closest?.('.cm-editor')&&event.target.closest?.('.nb-writing-field')&&(key==='z'||key==='y'))action=key==='y'||event.shiftKey?'redo':'undo';
@@ -119,6 +124,8 @@ function replaceFrom(entry,note,focusTitle=false){if(!mounted.current)return;con
     return h('button',{type:'button',className:'nb-nav-item',title:t(label),'aria-label':t(label),disabled,onClick},
       h(Icon,{name:icon,size:16}),h('span',{className:'nb-nav-label'},t(label)));
   }
+  const directoryVisible=!!opened&&view!=='trash';
+  const directoryProps={categories:categoryState,activeCategory:view,activeNoteId:opened?.note?.id,onSelectCategory:id=>{setView(id);setOffset(0);},onOpenNote:note=>openNote(note.id),onCreateNote:create,loadNotes:loadDirectoryNotes,onMoveNote:moveDirectoryNote,onBeforeCategoryDelete:async()=>!editorRef.current||await editorRef.current.flush(),onCategoryDeleted:categoryDeleted,refreshToken:String(data.counts.all)+':'+String(data.counts.trash)+':'+directoryEpoch,navigationState:directoryState,disabled:busy};
   const sidebar=h('aside',{className:'nb-categories tm-bs','aria-label':t('nbLibraryTab')},
     h('div',{className:'nb-sidebar-head'},
       h('h2',null,h('span',{className:'nb-library-mark'},h(Icon,{name:'book',size:15})),t('nbLibrary')),
@@ -127,16 +134,15 @@ function replaceFrom(entry,note,focusTitle=false){if(!mounted.current)return;con
     h('nav',{className:'nb-sidebar-nav nav nav-pills flex-column','aria-label':t('nbWorkspaceNavigation')},
       h('section',{className:'nb-nav-group'},
         h('h3',{className:'nb-nav-group-title'},t('nbLibraryGroup')),navigationItem(categories[0])),
-      h('section',{className:'nb-nav-group'},
-        h('h3',{className:'nb-nav-group-title'},t('nbCategory')),
-        h(CategoryNavigation,{categories:categoryState,value:view,onChange:chooseView,counts:data.counts,onManage:()=>setCategoryManager(true),disabled:categoryState.loading}),
+      h('section',{className:'nb-nav-group nb-sidebar-directory'},
+        !directoryVisible&&h('div',{className:'nb-directory-host'},h(DirectoryPanel,directoryProps)),
+        toolButton('folder','nbCatManage',()=>setCategoryManager(true),categoryState.loading),
         navigationItem(categories.at(-1))),
       h('section',{className:'nb-nav-group'},
         h('h3',{className:'nb-nav-group-title'},t('nbToolsGroup')),
         toolButton('upload','nbImport',()=>fileInput.current?.click(),busy)),
       h('section',{className:'nb-nav-group nb-category-foot'},
         toolButton('settings','nbSettings',()=>setSettings('appearance')))));
-  const directoryVisible=!!opened&&view!=='trash';
   const list=h('section',{className:'nb-list-panel tm-bs'+(directoryVisible?' is-directory':''),'aria-label':t('nbLibraryTab')},
     h('header',{className:'nb-list-head'},
       h('div',{className:'nb-list-heading'},
@@ -165,7 +171,7 @@ function replaceFrom(entry,note,focusTitle=false){if(!mounted.current)return;con
     error&&h('p',{className:'nb-warning',role:'alert'},t(error),error==='wbDraftUnavailable'&&h('button',{type:'button',className:'em-btn',disabled:busy,onClick:retryDrafts},t('wbRetryDrafts'))),
     noteCache.recoveryWarning&&h('p',{className:'nb-warning',role:'alert'},t('wbDraftRecoveryWarning'),h('button',{type:'button',className:'em-btn',disabled:busy,onClick:retryDrafts},t('wbRetryDrafts'))),
     categoryState.error&&h('p',{className:'nb-warning',role:'alert'},categoryState.error),
-    directoryVisible?h('div',{className:'nb-directory-host'},h(DirectoryPanel,{categories:categoryState,activeCategory:view,activeNoteId:opened?.note?.id,onSelectCategory:id=>{setView(id);setOffset(0);},onOpenNote:note=>openNote(note.id),onCreateNote:create,loadNotes:loadDirectoryNotes,onMoveNote:moveDirectoryNote,refreshToken:String(data.counts.all)+':'+String(data.counts.trash)+':'+directoryEpoch,disabled:busy})):h('div',{className:'nb-collection-layout'},
+    directoryVisible?h('div',{className:'nb-directory-host'},h(DirectoryPanel,directoryProps)):h('div',{className:'nb-collection-layout'},
       h('div',{className:'nb-note-list','aria-busy':loading},
         loading&&!data.notes.length?h('p',{className:'nb-muted',role:'status'},t('loading')):
         data.notes.length?(opened?data.notes.map(renderCard):sections.map(section=>h('section',{

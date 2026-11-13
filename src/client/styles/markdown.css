@@ -17,15 +17,6 @@
 .dn-workspace .em-md-label {
   letter-spacing: .01em;
 }
-.dn-workspace .em-md-modes {
-  display: flex;
-  flex-shrink: 0;
-  gap: 2px;
-  padding: 3px;
-  border: 0;
-  border-radius: var(--nb-control-radius);
-  background: var(--nb-field);
-}
 .dn-workspace .em-md-toggle {
   min-height: 28px;
   padding: 4px 9px;

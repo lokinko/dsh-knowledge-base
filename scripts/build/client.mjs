@@ -20,6 +20,23 @@ const bootstrap = await buildBootstrapStyles();
 await fs.writeFile(path.join(root, '.build/bootstrap-scoped.css'), bootstrap.css, 'utf8');
 
 // Inline a local parser Worker: no remote URL, import or dynamic code loader.
+const workerOptions = {
+  absWorkingDir: root,
+  bundle: true,
+  write: false,
+  format: 'iife',
+  platform: 'browser',
+  target: ['chrome110'],
+  minify: true,
+  legalComments: 'eof',
+  metafile: true,
+};
+// Draft persistence: IndexedDB clone/read-back runs off the main thread.
+const draftWorker = await build({...workerOptions, entryPoints: ['src/client/notes/draft-worker.js']});
+if (Object.values(draftWorker.metafile.outputs).some(output => output.imports.length)) {
+  throw new Error('Draft worker has unresolved imports');
+}
+const draftWorkerSource = draftWorker.outputFiles[0].text;
 const renderWorker = await build({
   absWorkingDir: root,
   entryPoints: ['src/client/markdown/render-worker.js'],
@@ -53,6 +70,7 @@ const result = await build({
     __TODO_KATEX_CSS__: JSON.stringify(katex.css),
     __TODO_BOOTSTRAP_CSS__: JSON.stringify(bootstrap.css),
     __NOTE_RENDER_WORKER_SOURCE__: JSON.stringify(workerSource),
+    __NOTE_DRAFT_WORKER_SOURCE__: JSON.stringify(draftWorkerSource),
   },
 });
 if (Object.values(result.metafile.outputs).some(output => output.imports.length)) {
@@ -61,6 +79,7 @@ if (Object.values(result.metafile.outputs).some(output => output.imports.length)
 const notices = await collectNotices(root, [
   ...Object.keys(result.metafile.inputs),
   ...Object.keys(renderWorker.metafile.inputs),
+  ...Object.keys(draftWorker.metafile.inputs),
 ], [bootstrap]);
 await fs.writeFile(path.join(root, 'THIRD_PARTY_NOTICES.md'), notices.text, 'utf8');
 const bytes = (await fs.stat(outfile)).size;
@@ -68,6 +87,7 @@ await fs.writeFile(path.join(root, '.build/client-meta.json'), JSON.stringify({
   moduleId,
   fonts: katex.fonts,
   renderWorker: {bytes: Buffer.byteLength(workerSource), metafile: renderWorker.metafile},
+  draftWorker: {bytes: Buffer.byteLength(draftWorkerSource), metafile: draftWorker.metafile},
   bootstrap: bootstrap.metadata,
   bytes,
   packages: notices.packages,
