@@ -9,7 +9,7 @@ import { apply } from '../../src/host/index.js';
 import { noteDomainSpec, MIGRATION_RECEIPT_KEY } from '../../src/host/domain-spec.js';
 
 async function fixture(t, pending = false) {
-  const temp = await fs.mkdtemp(path.join(os.tmpdir(), 'dsh-note-independent-'));
+  const temp = await fs.mkdtemp(path.join(await fs.realpath(os.tmpdir()), 'dsh-note-independent-'));
   const tables = new Map(), routes = new Map(), tools = new Map(), effects = [], opens = [], reads = [];
   let closed = 0, saves = 0;
   const ambient = new AsyncLocalStorage(), services = new Map(), sections = new Map(), lifecycle = [];

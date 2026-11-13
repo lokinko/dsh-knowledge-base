@@ -1179,7 +1179,7 @@ test('live rendering preserves widget DOM during caret moves and commits compose
 
 for(const width of [933,390]) test('storage folder picker: browse, recover errors and choose without switching at '+width,async({page})=>{
  const {host,errors}=await openWorkspace(page,{width,height:789});
- const temp=await fs.mkdtemp(path.join(os.tmpdir(),'dsh-folder-picker-ui-'));
+ const temp=await fs.mkdtemp(path.join(await fs.realpath(os.tmpdir()),'dsh-folder-picker-ui-'));
   const selected=path.join(temp,'资料库 A');await fs.mkdir(selected);await fs.mkdir(path.join(temp,'空目录'));
  try{
   await page.locator(width<600?'.nb-list-actions':'.nb-category-foot').getByRole('button',{name:'设置',exact:true}).click();

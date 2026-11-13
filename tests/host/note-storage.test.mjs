@@ -32,7 +32,7 @@ const recordFile = (control, name, key) => path.join(control.directory, 'dsh-not
   name, createHash('sha256').update(key).digest('hex') + '.json');
 const present = async target => { try { await fs.lstat(target); return true; } catch (error) { if (error.code === 'ENOENT') return false; throw error; } };
 async function fixture(t, seed = true) {
-  const temp = await fs.mkdtemp(path.join(os.tmpdir(), 'dsh-note-storage-test-'));
+  const temp = await fs.mkdtemp(path.join(await fs.realpath(os.tmpdir()), 'dsh-note-storage-test-'));
   const legacy = { notes: new Table(), note_versions: new Table(), note_chats: new Table() };
   const controlTable = new Table();
   const managers = [];

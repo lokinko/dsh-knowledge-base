@@ -74,7 +74,7 @@ class Blobs {
   }
 }
 async function fixture(t) {
-  const temp = await fs.mkdtemp(path.join(os.tmpdir(), 'dsh-attachment-storage-test-'));
+  const temp = await fs.mkdtemp(path.join(await fs.realpath(os.tmpdir()), 'dsh-attachment-storage-test-'));
   const native = path.join(temp, 'native'); await fs.mkdir(native);
   const blobs = new Blobs(native);
   const legacy = Object.fromEntries(Object.keys(schemas).map(name => [name, new Table()]));

@@ -16,7 +16,7 @@ class Table {
   async delete(key) { this.rows.delete(key); }
 }
 async function fixture(t, platform = 'win32') {
-  const temp = await fs.mkdtemp(path.join(os.tmpdir(), 'dsh-stage-rename-test-'));
+  const temp = await fs.mkdtemp(path.join(await fs.realpath(os.tmpdir()), 'dsh-stage-rename-test-'));
   const schemas = {notes: noteSchema, note_versions: noteVersionSchema, note_chats: chatBindingSchema};
   const legacy = Object.fromEntries(Object.keys(schemas).map(name => [name, new Table()]));
   const controlTable = new Table(), managers = [], attempts = [], waits = [];

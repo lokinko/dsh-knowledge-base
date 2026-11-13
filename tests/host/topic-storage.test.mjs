@@ -42,7 +42,7 @@ async function fileSnapshot(root){
  await visit(root);return files;
 }
 async function fixture(t){
- const temp=await fs.mkdtemp(path.join(os.tmpdir(),'dsh-topic-storage-test-'));
+ const temp=await fs.mkdtemp(path.join(await fs.realpath(os.tmpdir()),'dsh-topic-storage-test-'));
  const legacy=Object.fromEntries(Object.keys(schemas).map(name=>[name,new Table()]));
  const controlTable=new Table(),managers=[],objects=new Map();
  const blobs={

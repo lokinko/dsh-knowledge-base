@@ -6,7 +6,7 @@ import path from 'node:path';
 import {browseDirectories} from '../../src/host/storage/directories.js';
 
 async function fixture(t){
- const directory=await fs.mkdtemp(path.join(os.tmpdir(),'dsh-folder-picker-'));
+ const directory=await fs.mkdtemp(path.join(await fs.realpath(os.tmpdir()),'dsh-folder-picker-'));
  t.after(async()=>{const target=path.resolve(directory);assert.equal(path.dirname(target),await fs.realpath(os.tmpdir()));assert.ok(path.basename(target).startsWith('dsh-folder-picker-'));await fs.rm(target,{recursive:true,force:true});});
  return directory;
 }
